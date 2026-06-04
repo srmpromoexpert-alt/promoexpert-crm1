@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PromoExpert CRM</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f7f4;--bg2:#fff;--bg3:#f1efe8;
+  --text:#1a1a18;--text2:#6b6b67;
+  --bd:rgba(0,0,0,.1);--bd2:rgba(0,0,0,.2);
+  --blue:#185FA5;--bbg:#E6F1FB;--btxt:#0C447C;
+  --gbg:#EAF3DE;--gtxt:#27500A;
+  --abg:#FAEEDA;--atxt:#633806;
+  --red:#A32D2D;--rbg:#FCEBEB;--rtxt:#791F1F;
+  --pbg:#EEEDFE;--ptxt:#3C3489;
+  --cobg:#FAECE7;--cotxt:#712B13;
+  --grybg:#F1EFE8;--grytxt:#444441;
+  --r:8px;--rl:12px
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}
+/* sidebar */
+.sb{width:220px;flex-shrink:0;background:var(--bg2);border-right:.5px solid var(--bd);display:flex;flex-direction:column}
+.logo{padding:20px 16px 16px;border-bottom:.5px solid var(--bd)}
+.logo h1{font-size:15px;font-weight:600;margin:0}
+.logo p{font-size:11px;color:var(--text2);margin:2px 0 0}
+.nav{padding:8px;flex:1;overflow-y:auto}
+.nb{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--text2);border:none;background:none;width:100%;text-align:left;margin-bottom:2px}
+.nb:hover,.nb.on{background:var(--bg3);color:var(--text)}.nb.on{font-weight:500}
+.nbadge{margin-left:auto;background:var(--rbg);color:var(--rtxt);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.syncbar{padding:10px 12px;border-top:.5px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.sdot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
+.sdot.ok{background:#1D9E75}.sdot.err{background:#E24B4A}
+.sdot.spin{background:#EF9F27;animation:bl 1s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+/* main */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.topbar{background:var(--bg2);border-bottom:.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ttl{font-size:15px;font-weight:500}
+.content{flex:1;overflow-y:auto;padding:20px}
+/* buttons */
+.btn{padding:7px 14px;border-radius:var(--r);font-size:13px;cursor:pointer;border:.5px solid var(--bd2);background:var(--bg2);color:var(--text);display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn:hover{background:var(--bg3)}
+.btn.p{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.p:hover{background:#0C447C}
+.btn.d{background:var(--rbg);color:var(--red);border-color:var(--rbg)}
+.btn.s{padding:5px 10px;font-size:12px}
+.ib{width:28px;height:28px;border-radius:6px;border:.5px solid var(--bd2);background:var(--bg2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px}
+.ib:hover{background:var(--bg3)}.ib.d:hover{background:var(--rbg);color:var(--red)}
+/* sections */
+.sec{display:none;flex-direction:column;flex:1;overflow:hidden}
+.sec.on{display:flex}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--bg3);border-radius:var(--r);padding:14px 16px}
+.slbl{font-size:12px;color:var(--text2);margin-bottom:6px}
+.sval{font-size:22px;font-weight:600}
+.ssub{font-size:11px;color:var(--red);margin-top:4px}
+/* card */
+.card{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
+.ch{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:.5px solid var(--bd)}
+.ct{font-size:13px;font-weight:500}
+.lb{color:var(--blue);font-size:12px;background:none;border:none;cursor:pointer;padding:0}
+/* table */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 14px;text-align:left;color:var(--text2);font-weight:500;border-bottom:.5px solid var(--bd);font-size:12px;white-space:nowrap}
+td{padding:9px 14px;border-bottom:.5px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.ra{display:flex;gap:4px;opacity:0}.ra:hover,.tr-hov:hover .ra{opacity:1}
+tr:hover .ra{opacity:1}
+/* tags */
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.tag.bl{background:var(--bbg);color:var(--btxt)}
+.tag.gr{background:var(--gbg);color:var(--gtxt)}
+.tag.am{background:var(--abg);color:var(--atxt)}
+.tag.re{background:var(--rbg);color:var(--rtxt)}
+.tag.gy{background:var(--grybg);color:var(--grytxt)}
+.tag.pu{background:var(--pbg);color:var(--ptxt)}
+.tag.co{background:var(--cobg);color:var(--cotxt)}
+/* avatar */
+.av{width:28px;height:28px;border-radius:50%;background:var(--bbg);color:var(--btxt);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.fc{display:flex;align-items:center;gap:8px}
+/* search */
+.srch{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:.5px solid var(--bd);background:var(--bg3);flex-wrap:wrap}
+.srch input,.srch select{border:none;background:none;font-size:12px;color:var(--text);outline:none;font-family:inherit}
+.srch input{flex:1;min-width:120px}
+/* pipeline */
+.pipe{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;min-height:260px}
+.pcol{flex-shrink:0;width:180px}
+.ph{padding:8px 10px;border-radius:var(--r) var(--r) 0 0;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:space-between}
+.pb{border-radius:0 0 var(--r) var(--r);padding:6px;min-height:80px;background:var(--bg3)}
+.dc{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:10px;margin-bottom:6px;cursor:grab}
+.dc.dragging{opacity:.4;cursor:grabbing}
+.pb.drag-over{background:#dbeafe;border:.5px dashed var(--blue)}
+.dc:hover{border-color:var(--bd2)}
+.dn{font-size:12px;font-weight:500;margin-bottom:4px}
+.dm{font-size:11px;color:var(--text2)}
+/* tasks */
+.task{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:.5px solid var(--bd);position:relative}
+.task:last-child{border-bottom:none}
+.task:hover .tdel{display:flex}
+.tdel{display:none;position:absolute;right:14px;top:12px;width:22px;height:22px;border-radius:5px;background:var(--rbg);color:var(--red);border:none;cursor:pointer;font-size:12px;align-items:center;justify-content:center}
+.chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--bd2);flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.chk.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tb{flex:1;padding-right:28px}
+.tt{font-size:13px;margin-bottom:3px}
+.tt.on{text-decoration:line-through;color:var(--text2)}
+.tm{font-size:11px;color:var(--text2);display:flex;gap:10px}
+.od{color:var(--red)}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:10px}
+.br{display:flex;align-items:center;gap:10px;font-size:12px}
+.bl2{width:120px;flex-shrink:0;color:var(--text2);text-align:right}
+.bo{flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden}
+.bi{height:100%;border-radius:4px;background:var(--blue)}
+.bv{width:36px;flex-shrink:0;font-weight:500;font-size:12px}
+/* drawer */
+.drawer{position:absolute;right:0;top:0;bottom:0;width:400px;background:var(--bg2);border-left:.5px solid var(--bd);z-index:20;display:none;flex-direction:column}
+.drawer.on{display:flex}
+.dh{padding:16px;border-bottom:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.db{flex:1;overflow-y:auto;padding:16px}
+.fg{margin-bottom:14px}
+.fl{font-size:10px;color:var(--text2);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.fv{font-size:13px}
+.nb2{background:var(--bg3);padding:10px;border-radius:var(--r);font-size:12px;line-height:1.6}
+.hi{padding:10px 0;border-bottom:.5px solid var(--bd);display:flex;gap:10px}
+.hi:last-child{border-bottom:none}
+.hd{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:5px}
+.ht{font-size:12px;line-height:1.5}
+.hdt{font-size:11px;color:var(--text2);margin-top:2px}
+.sl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 10px;padding-top:14px;border-top:.5px solid var(--bd)}
+/* overlay */
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:center;justify-content:center}
+.ovl.on{display:flex}
+.modal{background:var(--bg2);border-radius:var(--rl);width:500px;max-height:90vh;overflow-y:auto}
+.mh{padding:20px 20px 16px;border-bottom:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:15px;font-weight:500}
+.mb{padding:20px}
+.mf{padding:14px 20px;border-top:.5px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.fr{margin-bottom:14px}
+.flab{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
+.fi{width:100%;padding:9px 12px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2);outline:none;font-family:inherit}
+.fi:focus{border-color:var(--blue)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mrow{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+/* autocomplete */
+.acw{position:relative}
+.acl{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:.5px solid var(--bd2);border-radius:var(--r);z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);display:none}
+.aci{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:.5px solid var(--bd)}
+.aci:hover{background:var(--bg3)}
+/* confirm */
+.cfm{background:var(--bg2);border-radius:var(--rl);width:360px;padding:24px}
+.ctt{font-size:15px;font-weight:500;margin-bottom:8px}
+.ctx{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.cr2{display:flex;justify-content:flex-end;gap:8px}
+/* companies */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.cc{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden}
+.cch{padding:14px 16px;border-bottom:.5px solid var(--bd);display:flex;align-items:center;gap:12px}
+.cav{width:40px;height:40px;border-radius:var(--r);background:var(--bbg);color:var(--btxt);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.ccb{padding:6px 16px}
+.cr{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--bd);font-size:12px}
+.cr:last-child{border-bottom:none}
+.ccf{padding:10px 16px;border-top:.5px solid var(--bd)}
+/* settings */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.si{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:var(--r);background:var(--bg3);margin-bottom:4px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sb">
+    <div class="logo"><h1>PromoExpert CRM</h1><p>Відділ продажів</p></div>
+    <nav class="nav">
+      <button class="nb on" data-sec="dashboard" onclick="goTo(this)"><i class="ti ti-layout-dashboard"></i> Дашборд</button>
+      <button class="nb" data-sec="clients" onclick="goTo(this)"><i class="ti ti-users"></i> Контакти</button>
+      <button class="nb" data-sec="companies" onclick="goTo(this)"><i class="ti ti-building"></i> Компанії</button>
+      <button class="nb" data-sec="pipeline" onclick="goTo(this)"><i class="ti ti-git-branch"></i> Воронка</button>
+      <button class="nb" data-sec="proposals" onclick="goTo(this)"><i class="ti ti-file-description"></i> КП <span class="nbadge" id="kpb">0</span></button>
+      <button class="nb" data-sec="tasks" onclick="goTo(this)"><i class="ti ti-checkbox"></i> Завдання <span class="nbadge" id="tkb">0</span></button>
+      <button class="nb" data-sec="analytics" onclick="goTo(this)"><i class="ti ti-chart-bar"></i> Аналітика</button>
+      <button class="nb" data-sec="settings" onclick="goTo(this)"><i class="ti ti-settings"></i> Налаштування</button>
+    </nav>
+    <div class="syncbar">
+      <div class="sdot" id="sdot"></div>
+      <span id="stxt">Підключення...</span>
+      <button class="btn s" style="margin-left:auto;padding:3px 8px" onclick="syncAll()"><i class="ti ti-refresh"></i></button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="sec on">
+      <div class="topbar">
+        <span class="ttl">Дашборд</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="position:relative">
+            <input id="gsrch" placeholder="Пошук по всій CRM..." oninput="globalSearch()" style="padding:7px 12px 7px 32px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;width:240px">
+            <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:14px"></i>
+          </div>
+          <span id="ddate" style="font-size:12px;color:var(--text2)"></span>
+        </div>
+      </div>
+      <div class="content">
+        <div id="gsrch-results" style="display:none;margin-bottom:16px"></div>
+        <div class="stats">
+          <div class="stat"><div class="slbl">Клієнтів</div><div class="sval" id="stc">0</div></div>
+          <div class="stat"><div class="slbl">Відкритих КП</div><div class="sval" id="stk">0</div></div>
+          <div class="stat"><div class="slbl">Активних завдань</div><div class="sval" id="stt">0</div><div class="ssub" id="stod"></div></div>
+          <div class="stat"><div class="slbl">Лідів у воронці</div><div class="sval" id="std">0</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="card">
+              <div class="ch" style="background:var(--rbg)">
+                <span class="ct" style="color:var(--red)"><i class="ti ti-alert-circle" style="vertical-align:-2px"></i> Прострочено</span>
+                <span class="nbadge" id="dash-od-cnt">0</span>
+              </div>
+              <div id="dash-overdue"></div>
+            </div>
+            <div class="card">
+              <div class="ch" style="background:#FFF8E6">
+                <span class="ct" style="color:#7A5000"><i class="ti ti-calendar-today" style="vertical-align:-2px"></i> Сьогодні</span>
+                <span id="dash-today-cnt" style="font-size:11px;color:#7A5000;font-weight:500">0</span>
+              </div>
+              <div id="dash-today"></div>
+            </div>
+            <div class="card">
+              <div class="ch">
+                <span class="ct"><i class="ti ti-calendar-week" style="vertical-align:-2px"></i> Майбутні</span>
+                <button class="lb" data-sec="tasks" onclick="goTo(this)">Всі →</button>
+              </div>
+              <div id="dash-future"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="ch"><span class="ct"><i class="ti ti-activity" style="vertical-align:-2px"></i> Активності</span></div>
+              <div id="actfeed" style="padding:0 16px"></div>
+            </div>
+            <div class="card">
+              <div class="ch"><span class="ct"><i class="ti ti-clock" style="vertical-align:-2px"></i> Нещодавно додані</span><button class="lb" data-sec="clients" onclick="goTo(this)">Всі →</button></div>
+              <div id="dash-recent"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div id="sec-clients" class="sec">
+      <div class="topbar">
+        <span class="ttl">Контакти</span>
+        <button class="btn p" onclick="openModal('client')"><i class="ti ti-plus"></i> Новий контакт</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="srch">
+            <i class="ti ti-search" style="color:var(--text2)"></i>
+            <input id="csrch" placeholder="Пошук..." oninput="filterClients()">
+            <select id="cind" onchange="filterClients()" style="cursor:pointer"><option value="">Всі галузі</option></select>
+            <select id="cstage" onchange="filterClients()" style="cursor:pointer"><option value="">Всі статуси</option></select>
+            <select id="csort" onchange="filterClients()" style="cursor:pointer">
+              <option value="new">Спочатку нові</option>
+              <option value="old">Спочатку старі</option>
+              <option value="az">А-Я</option>
+              <option value="za">Я-А</option>
+            </select>
+          </div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Джерело</th><th>Статус</th><th>Дата</th><th style="width:70px"></th></tr></thead>
+              <tbody id="ctbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPANIES -->
+    <div id="sec-companies" class="sec">
+      <div class="topbar">
+        <span class="ttl">Компанії</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="position:relative">
+            <input id="compsrch" placeholder="Пошук компанії..." oninput="renderCompanies()" style="padding:7px 12px 7px 32px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;width:200px">
+            <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px"></i>
+          </div>
+          <select id="compind" onchange="renderCompanies()" style="padding:7px 12px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer">
+            <option value="">Всі галузі</option>
+          </select>
+          <select id="compsort" onchange="renderCompanies()" style="padding:7px 12px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer">
+            <option value="az">А-Я</option>
+            <option value="za">Я-А</option>
+            <option value="most">Більше контактів</option>
+          </select>
+        </div>
+      </div>
+      <div class="content"><div class="cgrid" id="compgrid"></div></div>
+    </div>
+
+    <!-- PIPELINE -->
+    <div id="sec-pipeline" class="sec">
+      <div class="topbar">
+        <span class="ttl">Воронка продажів</span>
+        <button class="btn p" onclick="openModal('deal')"><i class="ti ti-plus"></i> Додати лід</button>
+      </div>
+      <div class="content">
+        <div class="card" style="padding:16px;overflow:auto">
+          <div class="pipe" id="pipeboard"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROPOSALS -->
+    <div id="sec-proposals" class="sec">
+      <div class="topbar">
+        <span class="ttl">Комерційні пропозиції</span>
+        <button class="btn p" onclick="openModal('proposal')"><i class="ti ti-plus"></i> Нове КП</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="tw">
+            <table>
+              <thead><tr><th>Компанія</th><th>Сума</th><th>Версія</th><th>Відправлено</th><th>Дедлайн</th><th>Статус</th><th>Дія</th><th style="width:50px"></th></tr></thead>
+              <tbody id="ptbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div id="sec-tasks" class="sec">
+      <div class="topbar">
+        <span class="ttl">Завдання</span>
+        <button class="btn p" onclick="openModal('task')"><i class="ti ti-plus"></i> Нове завдання</button>
+      </div>
+      <div class="content"><div class="card" id="tasklist"></div></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="sec-analytics" class="sec">
+      <div class="topbar"><span class="ttl">Аналітика</span></div>
+      <div class="content">
+        <div class="stats">
+          <div class="stat"><div class="slbl">Клієнтів</div><div class="sval" id="anc">0</div></div>
+          <div class="stat"><div class="slbl">КП всього</div><div class="sval" id="ank">0</div></div>
+          <div class="stat"><div class="slbl">Підписано</div><div class="sval" id="ans">0</div></div>
+          <div class="stat"><div class="slbl">Завдань виконано</div><div class="sval" id="and2">0</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card"><div class="ch"><span class="ct">За галуззю</span></div><div style="padding:16px"><div class="bars" id="chind"></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">Статуси КП</span></div><div style="padding:16px"><div class="bars" id="chkp"></div></div></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="ch"><span class="ct">По менеджерах</span></div>
+          <table><thead><tr><th>Менеджер</th><th>Клієнтів</th><th>Завдань</th><th>Виконано</th></tr></thead><tbody id="mgrtbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="sec-settings" class="sec">
+      <div class="topbar"><span class="ttl">Налаштування</span></div>
+      <div class="content">
+        <div class="sgrid" id="setgrid"></div>
+        <button class="btn d s" style="margin-top:12px" onclick="resetLists()"><i class="ti ti-refresh"></i> Скинути до стандартних</button>
+      </div>
+    </div>
+
+    <!-- DRAWER -->
+    <div class="drawer" id="drawer">
+      <div class="dh">
+        <span id="drttl" style="font-size:14px;font-weight:500"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn s" id="dredit"><i class="ti ti-edit"></i> Редагувати</button>
+          <button class="btn s d" id="drdel"><i class="ti ti-trash"></i></button>
+          <button class="btn s" onclick="closeDrawer()"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+      <div class="db" id="drbody"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="ovl" id="movl">
+  <div class="modal">
+    <div class="mh"><span class="mt" id="mttl"></span><button class="ib" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mb" id="mbody"></div>
+    <div class="mf">
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn p" onclick="saveModal()"><i class="ti ti-device-floppy"></i> Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="ovl" id="covl">
+  <div class="cfm">
+    <div class="ctt" id="cttl"></div>
+    <div class="ctx" id="ctxt"></div>
+    <div class="cr2">
+      <button class="btn" onclick="closeCfm()">Скасувати</button>
+      <button class="btn d" id="cok">Видалити</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbweF8q3Yli8cJfXcVYCGC6qkFxbSN3GAjcQSRIz27LdZ9TD7_BSLKCoPk6LeV5xAzDw/exec';
+var clients = [], proposals = [], tasks = [], acts = [];
+var curModal = '', curEditId = null, cfmCb = null;
+
+var DEFS = {
+  pipeStages: ['Новий лід','Перший контакт','Прорахунок','Відправлено КП','Очікування відповіді','Follow-up','Погодження','Замовлення'],
+  STAGES:     ['Новий лід','Перший контакт','Прорахунок','Відправлено КП','Очікування відповіді','Follow-up','Погодження','Замовлення','Закрита угода','Відмова'],
+  SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
+  INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
+  PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
+  MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено']
+};
+
+var LISTS;
+try { LISTS = JSON.parse(localStorage.getItem('crm_lists') || 'null') || JSON.parse(JSON.stringify(DEFS)); }
+catch(e) { LISTS = JSON.parse(JSON.stringify(DEFS)); }
+function gl(k) { return LISTS[k] || DEFS[k] || []; }
+function saveLists() { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); }
+
+// colors defined inside renderPipeline
+// texts defined inside renderPipeline
+var STAG = {'Новий лід':'bl','Перший контакт':'gy','Прорахунок':'am','Відправлено КП':'am','Очікування відповіді':'am','Follow-up':'co','Погодження':'pu','Замовлення':'gr','Закрита угода':'gr','Відмова':'re'};
+var PTAG = {'Очікування':'am','На розгляді':'bl','Прострочено':'re','Погоджується':'pu','Готується':'gy','Підписано':'gr','Відмова':'re'};
+// ── INDUSTRY COLORS ──
+var IND_COLORS = {
+  'Рітейл':           'bl',
+  'FMCG':             'gr',
+  'Фарма':            'gy',
+  'Фінанси':          'pu',
+  'Алкоголь':         'am',
+  'Косметика':        'co',
+  'Логістика':        'gy',
+  'Телеком':          'bl',
+  'Рекламна Агенція': 'pu',
+  'Табак':            'am',
+  'Інше':             'gy'
+};
+
+// Returns tag color for industry - cycles through colors for unknown ones
+var IND_CYCLE = ['bl','gr','pu','am','co','re'];
+var _indColorCache = {};
+function indBgTxt(ind) {
+  var cls = indColor(ind);
+  var map = {
+    bl: {bg:'#E6F1FB', txt:'#0C447C'},
+    gr: {bg:'#EAF3DE', txt:'#27500A'},
+    pu: {bg:'#EEEDFE', txt:'#3C3489'},
+    am: {bg:'#FAEEDA', txt:'#633806'},
+    co: {bg:'#FAECE7', txt:'#712B13'},
+    re: {bg:'#FCEBEB', txt:'#791F1F'},
+    gy: {bg:'#F1EFE8', txt:'#444441'}
+  };
+  return map[cls] || map.gy;
+}
+
+function indColor(ind) {
+  if (!ind) return 'gy';
+  if (IND_COLORS[ind]) return IND_COLORS[ind];
+  if (_indColorCache[ind]) return _indColorCache[ind];
+  var keys = Object.keys(_indColorCache);
+  var color = IND_CYCLE[keys.length % IND_CYCLE.length];
+  _indColorCache[ind] = color;
+  return color;
+}
+
+var SETLBLS = {INDUSTRIES:'Галузі',SOURCES:'Джерела',MANAGERS:'Менеджери',PROP_STATUSES:'Статуси КП',pipeStages:'Етапи воронки',STAGES:'Статуси клієнта'};
+
+function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(v) {
+  if (!v) return '';
+  var s = String(v);
+  if (s.indexOf('T') >= 0) {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      var dd = d.getDate();
+      var mm = d.getMonth() + 1;
+      return (dd < 10 ? '0' : '') + dd + '.' + (mm < 10 ? '0' : '') + mm + '.' + d.getFullYear();
+    }
+  }
+  var p = s.split('-');
+  if (p.length === 3 && p[0].length === 4) return p[2] + '.' + p[1] + '.' + p[0];
+  return s;
+}
+
+function todayISO() {
+  var d = new Date();
+  var mm = d.getMonth() + 1;
+  var dd = d.getDate();
+  return d.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
+}
+
+function fmtMoney(n) { return n ? '₴' + Number(n).toLocaleString('uk-UA') : '—'; }
+
+function mkTag(txt, cls) { return '<span class="tag ' + (cls || 'gy') + '">' + esc(txt) + '</span>'; }
+
+function mkAv(name) {
+  return '<div class="av">' + String(name || '?').slice(0,2).toUpperCase() + '</div>';
+}
+
+function gv(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+
+function parseList(val) {
+  if (!val) return [];
+  try { var p = JSON.parse(val); return Array.isArray(p) ? p : [String(val)]; }
+  catch(e) { return String(val).split(';').map(function(v) { return v.trim(); }).filter(Boolean); }
+}
+
+// ── EVENT DELEGATION ──
+document.addEventListener('click', function(e) {
+  var el = e.target.closest('[data-action]');
+  if (!el) return;
+  // Don't process clicks that should be handled by other listeners
+  if (e.defaultPrevented) return;
+  var a = el.getAttribute('data-action');
+  var id = el.getAttribute('data-id');
+  if (a === 'open-client')   { openClient(id); }
+  if (a === 'edit-client')   { editClient(id); }
+  if (a === 'del-client')    { deleteClient(id); }
+  if (a === 'del-task')      { deleteTask(id); }
+  if (a === 'edit-task')     { editTask(id); }
+  if (a === 'del-prop')      { deleteProp(id); }
+  if (a === 'toggle-task')   { toggleTask(id); }
+  if (a === 'add-to-company'){ addToCompany(el.getAttribute('data-name')); }
+  if (a === 'add-phone')     { addPhone(); }
+  if (a === 'add-email')     { addEmail(); }
+  if (a === 'del-mrow')      { el.closest('.mrow').remove(); }
+  if (a === 'ac-pick')       { acPick(el.getAttribute('data-val')); }
+  if (a === 'goto-company')  {
+    var cname = el.getAttribute('data-name');
+    closeDrawer();
+    // switch to companies tab and filter
+    document.querySelectorAll('.sec').forEach(function(s) { s.classList.remove('on'); });
+    document.querySelectorAll('.nb').forEach(function(b) { b.classList.remove('on'); });
+    document.getElementById('sec-companies').classList.add('on');
+    var nb = document.querySelector('[data-sec="companies"]');
+    if (nb) nb.classList.add('on');
+    var srch = document.getElementById('compsrch');
+    if (srch) { srch.value = cname; }
+    renderCompanies();
+  }
+  if (a === 'srch-open') {
+    var type = el.getAttribute('data-type');
+    var sid = el.getAttribute('data-id');
+    clearSearch();
+    if (type === 'client') { openClient(sid); }
+    if (type === 'task')   { goTo(document.querySelector('[data-sec="tasks"]')); }
+    if (type === 'proposal') { goTo(document.querySelector('[data-sec="proposals"]')); }
+  }
+  if (a === 'add-set')       { addSItem(el.getAttribute('data-key')); }
+  if (a === 'del-set')       { rmSItem(el.getAttribute('data-key'), parseInt(el.getAttribute('data-idx'))); }
+  if (a === 'set-up')        { moveSItem(el.getAttribute('data-key'), parseInt(el.getAttribute('data-idx')), -1); }
+  if (a === 'set-down')      { moveSItem(el.getAttribute('data-key'), parseInt(el.getAttribute('data-idx')), 1); }
+  if (a === 'quick-hist')    { saveQuickHist(id); }
+  if (a === 'dup-client')   { dupClient(id); }
+  if (a === 'quick-kp')    {
+    var cname = el.getAttribute('data-name');
+    closeDrawer();
+    openModal('proposal');
+    setTimeout(function() {
+      var sel = document.getElementById('fpcl');
+      if (sel) sel.value = cname;
+    }, 80);
+  }
+  if (a === 'quick-task')    { openQuickTask(id); }
+  if (a === 'open-pipe')     { openClient(id); }
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target.id !== 'fname') acHide();
+});
+
+// ── NAV ──
+function goTo(el) {
+  var id = el.getAttribute('data-sec');
+  document.querySelectorAll('.sec').forEach(function(s) { s.classList.remove('on'); });
+  document.querySelectorAll('.nb').forEach(function(b) { b.classList.remove('on'); });
+  document.getElementById('sec-' + id).classList.add('on');
+  el.classList.add('on');
+  closeDrawer();
+  if (id === 'analytics') renderAnalytics();
+  if (id === 'companies')  renderCompanies();
+  if (id === 'settings')   renderSettings();
+  if (id === 'clients')    { populateFilters(); filterClients(); }
+}
+
+// ── SYNC ──
+function ss(state, txt) {
+  document.getElementById('sdot').className = 'sdot' + (state ? ' ' + state : '');
+  document.getElementById('stxt').textContent = txt;
+}
+
+function apiGet(sheet) {
+  return new Promise(function(resolve) {
+    var cb = 'cb' + Math.random().toString(36).slice(2);
+    var sc = document.createElement('script');
+    var done = false;
+    var timer = setTimeout(function() {
+      if (done) return; done = true;
+      try { delete window[cb]; if (sc.parentNode) sc.parentNode.removeChild(sc); } catch(ex) {}
+      resolve([]);
+    }, 8000);
+    window[cb] = function(data) {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      try { delete window[cb]; if (sc.parentNode) sc.parentNode.removeChild(sc); } catch(ex) {}
+      resolve(Array.isArray(data) ? data : []);
+    };
+    sc.onerror = function() {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      try { delete window[cb]; if (sc.parentNode) sc.parentNode.removeChild(sc); } catch(ex) {}
+      resolve([]);
+    };
+    sc.src = API + '?sheet=' + encodeURIComponent(sheet) + '&callback=' + cb;
+    document.head.appendChild(sc);
+  });
+}
+
+function apiPost(payload) {
+  fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) }).catch(function() {});
+}
+
+function syncAll() {
+  ss('spin', 'Синхронізація...');
+  Promise.all([apiGet('clients'), apiGet('proposals'), apiGet('tasks')]).then(function(res) {
+    // Normalize keys - trim spaces from field names
+    function normObj(obj) {
+      var r = {};
+      for (var k in obj) { r[k.trim()] = obj[k]; }
+      return r;
+    }
+    try { clients   = res[0].map(normObj); } catch(e) { console.error('clients parse error', e); clients = []; }
+    try { proposals = res[1].map(normObj); } catch(e) { console.error('proposals parse error', e); proposals = []; }
+    try {
+      tasks = res[2].map(function(t) {
+        t = normObj(t);
+        t.done    = (t.done    === 'TRUE' || t.done    === true || t.done    === 'true');
+        t.overdue = (t.overdue === 'TRUE' || t.overdue === true || t.overdue === 'true');
+        return t;
+      });
+    } catch(e) { console.error('tasks parse error', e); tasks = []; }
+    renderAll();
+    ss('ok', 'Синхронізовано');
+  }).catch(function(e) { ss('err', 'Помилка: ' + String(e)); console.error('syncAll error:', e); });
+}
+
+// ── DRAG AND DROP ──
+function initDragDrop() {
+  var board = document.getElementById('pipeboard');
+  if (!board) return;
+
+  board.addEventListener('dragstart', function(e) {
+    var card = e.target.closest('.dc');
+    if (!card) return;
+    card.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', card.getAttribute('data-cid'));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  board.addEventListener('dragend', function(e) {
+    var card = e.target.closest('.dc');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.pb').forEach(function(col) { col.classList.remove('drag-over'); });
+  });
+
+  board.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var col = e.target.closest('.pb');
+    if (col) {
+      document.querySelectorAll('.pb').forEach(function(c) { c.classList.remove('drag-over'); });
+      col.classList.add('drag-over');
+    }
+  });
+
+  board.addEventListener('dragleave', function(e) {
+    var col = e.target.closest('.pb');
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+  });
+
+  board.addEventListener('drop', function(e) {
+    e.preventDefault();
+    var cid = e.dataTransfer.getData('text/plain');
+    var col = e.target.closest('.pb');
+    if (!col || !cid) return;
+    col.classList.remove('drag-over');
+    var newStage = col.getAttribute('data-stage');
+    if (!newStage) return;
+    var c = clients.find(function(x) { return String(x.id) === String(cid); });
+    if (!c || c.stage === newStage) return;
+    c.stage = newStage;
+    c.last = new Date().toLocaleDateString('uk-UA');
+    apiPost({sheet:'clients', action:'update', id:c.id, row:[c.id,c.name,c.contact,c.role,c.phones||'[]',c.emails||'[]',c.linkedin||'',c.industry||'',c.source||'',c.stage,c.last,c.notes||'',c.history||'[]',c.manager||'',c.brands||'']});
+    renderPipeline();
+    initDragDrop();
+    renderClients();
+    updateStats();
+    addAct(esc(c.name) + ' → ' + esc(newStage), '#185FA5');
+  });
+}
+
+// ── GLOBAL SEARCH ──
+function globalSearch() {
+  var q = (document.getElementById('gsrch') || {value:''}).value.trim().toLowerCase();
+  var res = document.getElementById('gsrch-results');
+  if (!q || q.length < 2) { res.style.display = 'none'; return; }
+
+  var found = [];
+
+  // Search clients
+  for (var i = 0; i < clients.length; i++) {
+    var c = clients[i];
+    var text = [c.name,c.contact,c.role,c.phone,c.email,c.industry,c.notes].join(' ').toLowerCase();
+    if (text.indexOf(q) >= 0) found.push({type:'client', id:c.id, title:c.name, sub:c.contact||'', tag:c.stage||''});
+  }
+
+  // Search tasks
+  for (var i = 0; i < tasks.length; i++) {
+    var t = tasks[i];
+    if ((t.title||'').toLowerCase().indexOf(q) >= 0 || (t.clientName||'').toLowerCase().indexOf(q) >= 0) {
+      found.push({type:'task', id:t.id, title:t.title||'', sub:t.clientName||'', tag:t.due||''});
+    }
+  }
+
+  // Search proposals
+  for (var i = 0; i < proposals.length; i++) {
+    var p = proposals[i];
+    if ((p.client||'').toLowerCase().indexOf(q) >= 0 || (p.action||'').toLowerCase().indexOf(q) >= 0) {
+      found.push({type:'proposal', id:p.id, title:p.client||'', sub:p.action||'', tag:p.status||''});
+    }
+  }
+
+  if (!found.length) {
+    res.style.display = 'block';
+    res.innerHTML = '<div class="card"><div style="padding:16px;font-size:13px;color:var(--text2)">Нічого не знайдено по запиту "' + esc(q) + '"</div></div>';
+    return;
+  }
+
+  var icons = {client:'ti-users', task:'ti-checkbox', proposal:'ti-file-description'};
+  var labels = {client:'Контакт', task:'Завдання', proposal:'КП'};
+  var h = '<div class="card"><div class="ch"><span class="ct">Результати пошуку (' + found.length + ')</span><button class="lb" onclick="clearSearch()">Закрити ×</button></div>';
+  for (var i = 0; i < Math.min(found.length, 10); i++) {
+    var r = found[i];
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:.5px solid var(--bd);cursor:pointer" data-action="srch-open" data-type="' + r.type + '" data-id="' + esc(r.id) + '">';
+    h += '<i class="ti ' + icons[r.type] + '" style="color:var(--blue);font-size:16px"></i>';
+    h += '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + esc(r.title) + '</div>';
+    h += '<div style="font-size:11px;color:var(--text2)">' + labels[r.type] + (r.sub ? ' · ' + esc(r.sub) : '') + '</div></div>';
+    h += '<span class="tag gy" style="font-size:10px">' + esc(r.tag) + '</span>';
+    h += '</div>';
+  }
+  h += '</div>';
+  res.innerHTML = h;
+  res.style.display = 'block';
+}
+
+function clearSearch() {
+  var inp = document.getElementById('gsrch');
+  if (inp) inp.value = '';
+  var res = document.getElementById('gsrch-results');
+  if (res) res.style.display = 'none';
+}
+
+function mkTaskRow(t) {
+  var h = '';
+  h += '<div class="task">';
+  h += '<div class="chk' + (t.done ? ' on' : '') + '" data-action="toggle-task" data-id="' + esc(t.id) + '">' + (t.done ? '<i class="ti ti-check" style="font-size:10px"></i>' : '') + '</div>';
+  h += '<div class="tb">';
+  h += '<div class="tt' + (t.done ? ' on' : '') + '">' + esc(t.title || '');
+  var tClientName = t.clientName || '';
+  // Try to find clientName if not set
+  if (!tClientName && t.clientId) {
+    var cl2 = clients.find(function(x) { return String(x.id) === String(t.clientId); });
+    if (cl2) tClientName = cl2.name;
+  }
+  if (tClientName) {
+    var cl = clients.find(function(x) { return x.name === tClientName; });
+    var cid = cl ? cl.id : '';
+    h += ' <span data-action="open-client" data-id="' + esc(cid) + '" style="font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline">· ' + esc(tClientName) + '</span>';
+  }
+  h += '</div>';
+  h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
+  h += '</div>';
+  h += '<button class="tdel" data-action="del-task" data-id="' + esc(t.id) + '"><i class="ti ti-x"></i></button>';
+  h += '</div>';
+  return h;
+}
+
+function parseTaskDate(due) {
+  if (!due || due === 'Без дедлайну') return null;
+  var s = String(due).split(' о ')[0].trim();
+  var m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function isTaskOverdue(due) {
+  var d = parseTaskDate(due);
+  if (!d) return false;
+  var today = new Date(); today.setHours(0,0,0,0);
+  return d < today;
+}
+
+function isTaskToday(due) {
+  var d = parseTaskDate(due);
+  if (!d) return false;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  return d >= today && d < tomorrow;
+}
+
+function renderDashTasks() {
+  var active = tasks.filter(function(t) { return !t.done; });
+  var overdue = active.filter(function(t) { return isTaskOverdue(t.due); });
+  var today   = active.filter(function(t) { return !isTaskOverdue(t.due) && isTaskToday(t.due); });
+  var future  = active.filter(function(t) { return !isTaskOverdue(t.due) && !isTaskToday(t.due) && t.due !== 'Без дедлайну'; });
+
+  var odCnt = document.getElementById('dash-od-cnt');
+  var tdCnt = document.getElementById('dash-today-cnt');
+  if (odCnt) odCnt.textContent = overdue.length;
+  if (tdCnt) tdCnt.textContent = today.length;
+
+  function fillDiv(elId, arr) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    if (!arr.length) { el.innerHTML = '<div style="padding:12px 16px;font-size:13px;color:var(--text2)">Немає</div>'; return; }
+    var h = '';
+    for (var i = 0; i < arr.length; i++) h += mkTaskRow(arr[i]);
+    el.innerHTML = h;
+  }
+
+  fillDiv('dash-overdue', overdue);
+  fillDiv('dash-today', today);
+  fillDiv('dash-future', future.slice(0, 5));
+}
+
+// Persistent filter state - survives renderAll calls
+var _filterState = {csrch:'', cind:'', cstage:'', csort:'new'};
+
+function saveFilterState() {
+  var el;
+  el = document.getElementById('csrch');  if (el) _filterState.csrch  = el.value;
+  el = document.getElementById('cind');   if (el) _filterState.cind   = el.value;
+  el = document.getElementById('cstage'); if (el) _filterState.cstage = el.value;
+  el = document.getElementById('csort');  if (el) _filterState.csort  = el.value;
+}
+
+function restoreFilterState() {
+  var el;
+  el = document.getElementById('csrch');  if (el) el.value = _filterState.csrch  || '';
+  el = document.getElementById('cstage'); if (el) el.value = _filterState.cstage || '';
+  el = document.getElementById('csort');  if (el) el.value = _filterState.csort  || 'new';
+  el = document.getElementById('cind');   if (el) el.value = _filterState.cind   || '';
+}
+
+function renderAll() {
+  saveFilterState();
+  renderClients();
+  renderPipeline();
+  renderProposals();
+  renderTasks();
+  renderDashTasks();
+  renderActivity();
+  renderRecentClients();
+  updateStats();
+  populateFilters();
+  restoreFilterState();
+  filterClients();
+}
+
+function renderRecentClients() {
+  var el = document.getElementById('dash-recent');
+  if (!el) return;
+  var sorted = clients.slice().sort(function(a,b) {
+    return parseMyDate(b.last) - parseMyDate(a.last);
+  });
+  var show = sorted.slice(0,5);
+  if (!show.length) { el.innerHTML = '<div style="padding:12px 16px;font-size:13px;color:var(--text2)">Немає клієнтів</div>'; return; }
+  var h = '';
+  for (var i = 0; i < show.length; i++) {
+    var c = show[i];
+    var cbt = indBgTxt(c.industry);
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:.5px solid var(--bd);cursor:pointer" data-action="open-client" data-id="' + esc(c.id) + '">';
+    h += '<div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div>';
+    h += '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + esc(c.name) + '</div>';
+    h += '<div style="font-size:11px;color:var(--text2)">' + esc(c.contact||'') + (c.contact&&c.role?' · ':'') + esc(c.role||'') + '</div></div>';
+    h += mkTag(c.stage||'—', STAG[c.stage]||'gy');
+    h += '</div>';
+  }
+  if (show[show.length-1]) {
+    // remove last border
+    h = h.replace(/border-bottom:.5px solid var\(--bd\)([^"]*)"(?=[^>]*data-id="[^"]*">(?:(?!border-bottom).)*$)/,'');
+  }
+  el.innerHTML = h;
+}
+
+// ── CLIENTS ──
+function renderClients(list) {
+  list = list || clients;
+  var tbody = document.getElementById('ctbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Контактів немає</td></tr>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    var st = STAG[c.stage] || 'gy';
+    h += '<tr>';
+    var cbt = indBgTxt(c.industry);
+    h += '<td data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer"><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
+    h += '<td data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer"><div>' + esc(c.contact || '') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
+    h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + esc(c.source || '—') + '</td>';
+    h += '<td>' + mkTag(c.stage || '—', st) + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
+    h += '<td><div class="ra">';
+    h += '<button class="ib" data-action="open-client" data-id="' + esc(c.id) + '"><i class="ti ti-eye"></i></button>';
+    h += '<button class="ib d" data-action="del-client" data-id="' + esc(c.id) + '"><i class="ti ti-trash"></i></button>';
+    h += '</div></td>';
+    h += '</tr>';
+  }
+  tbody.innerHTML = h;
+}
+
+function populateFilters() {
+  var indSel = document.getElementById('cind');
+  var stageSel = document.getElementById('cstage');
+  if (!indSel || !stageSel) return;
+  var inds = [], stages = [];
+  for (var i = 0; i < clients.length; i++) {
+    var ind = clients[i].industry || '';
+    var stg = clients[i].stage || '';
+    if (ind && inds.indexOf(ind) < 0) inds.push(ind);
+    if (stg && stages.indexOf(stg) < 0) stages.push(stg);
+  }
+  // Use _filterState to preserve selection
+  var iOld = _filterState.cind || indSel.value;
+  var sOld = _filterState.cstage || stageSel.value;
+  indSel.innerHTML = '<option value="">Всі галузі</option>';
+  for (var i = 0; i < inds.length; i++) indSel.innerHTML += '<option value="' + esc(inds[i]) + '"' + (inds[i] === iOld ? ' selected' : '') + '>' + esc(inds[i]) + '</option>';
+  stageSel.innerHTML = '<option value="">Всі статуси</option>';
+  for (var i = 0; i < stages.length; i++) stageSel.innerHTML += '<option value="' + esc(stages[i]) + '"' + (stages[i] === sOld ? ' selected' : '') + '>' + esc(stages[i]) + '</option>';
+}
+
+function parseMyDate(s) {
+  if (!s) return 0;
+  var str = String(s);
+  var m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1])).getTime();
+  var d = new Date(str);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function filterClients() {
+  saveFilterState();
+  var q = (document.getElementById('csrch') || {value:''}).value.toLowerCase();
+  var ind = (document.getElementById('cind') || {value:''}).value;
+  var stage = (document.getElementById('cstage') || {value:''}).value;
+  var sort = (document.getElementById('csort') || {value:'new'}).value;
+  var list = clients.filter(function(c) {
+    var mq = (c.name || '').toLowerCase().indexOf(q) >= 0 || (c.contact || '').toLowerCase().indexOf(q) >= 0;
+    var mi = !ind || (c.industry || '') === ind;
+    var ms = !stage || (c.stage || '') === stage;
+    return mq && mi && ms;
+  });
+  list = list.slice();
+
+  if (sort === 'new') list.sort(function(a,b) { return parseMyDate(b.last) - parseMyDate(a.last); });
+  else if (sort === 'old') list.sort(function(a,b) { return parseMyDate(a.last) - parseMyDate(b.last); });
+  else if (sort === 'az') list.sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); });
+  else if (sort === 'za') list.sort(function(a,b) { return (b.name||'').localeCompare(a.name||''); });
+  renderClients(list);
+}
+
+function openClient(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  document.getElementById('drttl').textContent = c.name;
+  document.getElementById('dredit').setAttribute('data-action', 'edit-client');
+  document.getElementById('dredit').setAttribute('data-id', id);
+  document.getElementById('drdel').setAttribute('data-action', 'del-client');
+  document.getElementById('drdel').setAttribute('data-id', id);
+  var phones = parseList(c.phones || c.phone || '');
+  var emails = parseList(c.emails || c.email || '');
+  var relP = proposals.filter(function(p) { return p.client === c.name; });
+  var relT = tasks.filter(function(t) { return t.clientId === id; });
+  var hist = [];
+  try { hist = JSON.parse(c.history || '[]'); } catch(e) {}
+  var h = '';
+  h += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">';
+  var dbt = indBgTxt(c.industry);
+  h += '<div class="av" style="width:44px;height:44px;font-size:14px;background:' + dbt.bg + ';color:' + dbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div>';
+  h += '<div style="flex:1">';
+  h += '<div style="font-weight:600;font-size:15px">' + esc(c.name) + '</div>';
+  var stageOpts = '';
+  var allStages = gl('STAGES');
+  for (var si = 0; si < allStages.length; si++) {
+    stageOpts += '<option value="' + esc(allStages[si]) + '"' + (allStages[si] === (c.stage||'') ? ' selected' : '') + '>' + esc(allStages[si]) + '</option>';
+  }
+  h += '<div style="margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+    h += '<select class="quick-stage-sel" data-cid="' + esc(id) + '" style="padding:3px 8px;border:.5px solid var(--bd2);border-radius:20px;font-size:11px;font-weight:500;background:var(--bg3);color:var(--text);outline:none;cursor:pointer;font-family:inherit">' + stageOpts + '</select>';
+  h += '<button class="lb" data-action="goto-company" data-name="' + esc(c.name) + '" style="font-size:11px"><i class="ti ti-building" style="font-size:11px;vertical-align:-1px"></i> Компанія →</button>';
+  h += '</div>';
+  // Show colleagues from same company
+  var colleagues = clients.filter(function(x) { return x.name === c.name && String(x.id) !== String(id); });
+  if (colleagues.length) {
+    h += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">';
+    for (var ci = 0; ci < colleagues.length; ci++) {
+      var col = colleagues[ci];
+      h += '<span data-action="open-client" data-id="' + esc(col.id) + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;background:var(--bg3);cursor:pointer;border:.5px solid var(--bd2)">';
+      h += '<div class="av" style="width:16px;height:16px;font-size:8px">' + String(col.contact||col.name||'?').slice(0,2).toUpperCase() + '</div>';
+      h += esc(col.contact || col.name);
+      h += '</span>';
+    }
+    h += '</div>';
+  }
+  h += '</div></div>';
+  if (c.contact) h += '<div class="fg"><div class="fl">Контакт</div><div class="fv">' + esc(c.contact) + (c.role ? ' · <span style="color:var(--text2)">' + esc(c.role) + '</span>' : '') + '</div></div>';
+  if (phones.length) {
+    h += '<div class="fg"><div class="fl">Телефон' + (phones.length > 1 ? 'и' : '') + '</div><div class="fv">';
+    for (var i = 0; i < phones.length; i++) h += '<a href="tel:' + esc(phones[i]) + '" style="color:var(--text);display:block;text-decoration:none">' + esc(phones[i]) + '</a>';
+    h += '</div></div>';
+  }
+  if (emails.length) {
+    h += '<div class="fg"><div class="fl">Email' + (emails.length > 1 ? 'и' : '') + '</div><div class="fv">';
+    for (var i = 0; i < emails.length; i++) h += '<a href="mailto:' + esc(emails[i]) + '" style="color:var(--blue);display:block;text-decoration:none">' + esc(emails[i]) + '</a>';
+    h += '</div></div>';
+  }
+  if (c.linkedin) {
+    var liUrl = c.linkedin;
+    if (liUrl.indexOf('http') < 0) liUrl = 'https://' + liUrl;
+    h += '<div class="fg"><div class="fl">LinkedIn</div><div class="fv"><a href="' + esc(liUrl) + '" target="_blank" rel="noopener" style="color:var(--blue)">' + esc(c.linkedin) + ' <i class="ti ti-external-link" style="font-size:11px;vertical-align:-1px"></i></a></div></div>';
+  }
+  if (c.industry) h += '<div class="fg"><div class="fl">Галузь</div><div class="fv">' + mkTag(c.industry, indColor(c.industry)) + '</div></div>';
+  if (c.source)   h += '<div class="fg"><div class="fl">Джерело</div><div class="fv">' + esc(c.source) + '</div></div>';
+  if (c.brands)   h += '<div class="fg"><div class="fl">Бренди</div><div class="fv">' + esc(c.brands) + '</div></div>';
+  if (c.notes)    h += '<div class="fg"><div class="fl">Особливості</div><div class="nb2">' + esc(c.notes) + '</div></div>';
+  if (relT.length) {
+    h += '<div class="sl">Завдання (' + relT.length + ')</div>';
+    for (var i = 0; i < relT.length; i++) {
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--bd);font-size:12px' + (relT[i].done ? ';color:var(--text2)' : '') + '">';
+      h += (relT[i].done ? '<i class="ti ti-check" style="color:var(--blue)"></i>' : '<i class="ti ti-clock" style="color:var(--text2)"></i>');
+      h += ' ' + esc(relT[i].title || '') + '<span style="margin-left:auto;color:var(--text2)">' + esc(relT[i].due || '') + '</span></div>';
+    }
+  }
+  if (relP.length) {
+    h += '<div class="sl">КП (' + relP.length + ')</div>';
+    for (var i = 0; i < relP.length; i++) {
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:.5px solid var(--bd);font-size:12px">';
+      h += '<span>' + esc(relP[i].action || '—') + '</span>' + mkTag(relP[i].status || '—', PTAG[relP[i].status] || 'gy') + '</div>';
+    }
+  }
+  h += '<div class="sl">Історія</div>';
+  if (hist.length) {
+    for (var i = 0; i < hist.length; i++) {
+      h += '<div class="hi"><div class="hd"></div><div><div class="ht">' + esc(hist[i].text) + '</div><div class="hdt">' + esc(hist[i].date) + '</div></div></div>';
+    }
+  } else {
+    h += '<div style="font-size:12px;color:var(--text2)">Нотаток ще немає</div>';
+  }
+  // ── QUICK ACTIONS PANEL ──
+  h += '<div style="margin-top:16px;border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden">';
+  h += '<div style="padding:10px 14px;background:var(--bg3);font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Швидкі дії</div>';
+
+  // History note with type selector
+  h += '<div style="padding:12px 14px;border-bottom:.5px solid var(--bd)">';
+  h += '<div style="display:flex;gap:6px;margin-bottom:8px">';
+  h += '<select id="qhi-type" style="padding:5px 8px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--bg2);color:var(--text);outline:none;font-family:inherit">';
+  h += '<option value="Дзвінок"> Дзвінок</option>';
+  h += '<option value="Email"> Email</option>';
+  h += '<option value="Зустріч"> Зустріч</option>';
+  h += '<option value="КП відправлено"> КП відправлено</option>';
+  h += '<option value="Повідомлення"> Повідомлення</option>';
+  h += '<option value="Нотатка"> Нотатка</option>';
+  h += '</select>';
+  h += '<input class="fi" id="qhi" placeholder="Що відбулось..." style="flex:1;padding:6px 10px;font-size:12px">';
+  h += '<button class="btn p s" data-action="quick-hist" data-id="' + esc(id) + '"><i class="ti ti-send"></i></button>';
+  h += '</div></div>';
+
+  // Action buttons
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">';
+
+  // Task
+  h += '<button class="btn s" style="border:none;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px" data-action="quick-task" data-id="' + esc(id) + '">';
+  h += '<i class="ti ti-checkbox" style="font-size:18px;color:var(--blue)"></i>';
+  h += '<span style="font-size:11px">Завдання</span></button>';
+
+  // Email
+  var emailAddr = emails.length ? emails[0] : '';
+  h += '<a href="mailto:' + esc(emailAddr) + '" style="display:flex;border:none;border-bottom:.5px solid var(--bd);border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px;text-decoration:none;color:var(--text);background:var(--bg2);cursor:pointer;align-items:center">';
+  h += '<i class="ti ti-mail" style="font-size:18px;color:var(--blue)"></i>';
+  h += '<span style="font-size:11px">Email</span></a>';
+
+  // Call
+  var phoneAddr = phones.length ? phones[0] : '';
+  h += '<a href="tel:' + esc(phoneAddr) + '" style="display:flex;border:none;border-right:.5px solid var(--bd);border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px;text-decoration:none;color:var(--text);background:var(--bg2);cursor:pointer;align-items:center">';
+  h += '<i class="ti ti-phone" style="font-size:18px;color:var(--blue)"></i>';
+  h += '<span style="font-size:11px">Дзвінок</span></a>';
+
+  // New KP
+  h += '<button class="btn s" style="border:none;border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px" data-action="quick-kp" data-id="' + esc(id) + '" data-name="' + esc(c.name) + '">';
+  h += '<i class="ti ti-file-description" style="font-size:18px;color:var(--blue)"></i>';
+  h += '<span style="font-size:11px">Нове КП</span></button>';
+
+  h += '</div>';
+
+  // Duplicate
+  h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:flex-end">';
+  h += '<button class="btn s" data-action="dup-client" data-id="' + esc(id) + '" style="font-size:11px"><i class="ti ti-copy"></i> Дублювати картку</button>';
+  h += '</div>';
+  h += '</div>';
+  document.getElementById('drbody').innerHTML = h;
+  document.getElementById('drawer').classList.add('on');
+  var qhi = document.getElementById('qhi');
+  if (qhi) {
+    qhi.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveQuickHist(id); });
+  }
+  var stageSel = document.querySelector('.quick-stage-sel');
+  if (stageSel) {
+    stageSel.addEventListener('change', function() {
+      quickChangeStage(this.getAttribute('data-cid'), this.value);
+    });
+  }
+}
+
+function quickChangeStage(id, newStage) {
+  if (!newStage) return;
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c || c.stage === newStage) return;
+  c.stage = newStage;
+  c.last = new Date().toLocaleDateString('uk-UA');
+  apiPost({sheet:'clients', action:'update', id:c.id, row:[c.id,c.name,c.contact,c.role,c.phones||'[]',c.emails||'[]',c.linkedin||'',c.industry||'',c.source||'',c.stage,c.last,c.notes||'',c.history||'[]',c.manager||'',c.brands||'']});
+  renderPipeline();
+  renderClients();
+  updateStats();
+  addAct(esc(c.name) + ' → ' + esc(newStage), '#185FA5');
+  // refresh drawer
+  openClient(id);
+}
+
+function saveQuickHist(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  var inp = document.getElementById('qhi');
+  if (!inp || !inp.value.trim()) return;
+  var typeSel = document.getElementById('qhi-type');
+  var emojiMap = {};
+  var typeVal = typeSel ? typeSel.value : '';
+  var prefix = typeVal ? typeVal + ': ' : '';
+  var text = prefix + inp.value.trim();
+  var today = new Date().toLocaleDateString('uk-UA');
+  var hist = [];
+  try { hist = JSON.parse(c.history || '[]'); } catch(e) {}
+  hist.unshift({text: text, date: today});
+  c.history = JSON.stringify(hist);
+  c.last = today;
+  apiPost({sheet:'clients', action:'update', id:c.id, row:[c.id,c.name,c.contact,c.role,c.phones||'[]',c.emails||'[]',c.linkedin||'',c.industry||'',c.source||'',c.stage||'',c.last,c.notes||'',c.history,c.manager||'',c.brands||'']});
+  addAct(esc(c.name) + ': ' + esc(text), '#185FA5');
+  openClient(id);
+}
+
+function dupClient(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  closeDrawer();
+  curModal = 'client';
+  document.getElementById('mttl').textContent = 'Дублювати клієнта';
+  var copy = JSON.parse(JSON.stringify(c));
+  copy.name = c.name + ' (копія)';
+  copy.contact = '';
+  copy.history = '[]';
+  document.getElementById('mbody').innerHTML = buildClientForm(copy);
+  document.getElementById('movl').classList.add('on');
+}
+
+function openQuickTask(clientId) {
+  var c = clients.find(function(x) { return String(x.id) === String(clientId); });
+  if (!c) return;
+  closeDrawer();
+  openModal('task');
+  setTimeout(function() {
+    var sel = document.getElementById('fclientlink');
+    if (sel) { sel.value = clientId; fillTaskTitle(); }
+  }, 80);
+}
+
+function editClient(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  curModal = 'client_edit';
+  curEditId = id;
+  document.getElementById('mttl').textContent = 'Редагувати клієнта';
+  document.getElementById('mbody').innerHTML = buildClientForm(c);
+  document.getElementById('movl').classList.add('on');
+}
+
+function deleteClient(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  showCfm('Видалити "' + c.name + '"?', 'Картку буде видалено з бази.', function() {
+    clients = clients.filter(function(x) { return String(x.id) !== String(id); });
+    renderClients(); updateStats(); closeDrawer();
+    apiPost({sheet:'clients', action:'delete', id:id});
+    addAct('Видалено: ' + esc(c.name), '#E24B4A');
+  });
+}
+
+// ── COMPANIES ──
+function renderCompanies() {
+  var q = (document.getElementById('compsrch') || {value:''}).value.toLowerCase();
+  var indF = (document.getElementById('compind') || {value:''}).value;
+  var sortF = (document.getElementById('compsort') || {value:'az'}).value;
+  // Populate industry filter
+  var indSel = document.getElementById('compind');
+  if (indSel) {
+    var currentVal = indSel.value;
+    var allInds = [];
+    for (var i = 0; i < clients.length; i++) { if (clients[i].industry && allInds.indexOf(clients[i].industry) < 0) allInds.push(clients[i].industry); }
+    allInds.sort();
+    var indHtml = '<option value="">Всі галузі</option>';
+    for (var i = 0; i < allInds.length; i++) indHtml += '<option value="' + esc(allInds[i]) + '"' + (allInds[i] === currentVal ? ' selected' : '') + '>' + esc(allInds[i]) + '</option>';
+    indSel.innerHTML = indHtml;
+  }
+  var map = {};
+  for (var i = 0; i < clients.length; i++) {
+    var k = clients[i].name || '?';
+    if (!map[k]) map[k] = [];
+    map[k].push(clients[i]);
+  }
+  var keys = Object.keys(map).filter(function(k) {
+    var matchQ = k.toLowerCase().indexOf(q) >= 0;
+    var matchInd = !indF || map[k].some(function(c) { return c.industry === indF; });
+    return matchQ && matchInd;
+  });
+  // Sort companies
+  if (sortF === 'za') keys.sort(function(a,b) { return b.localeCompare(a); });
+  else if (sortF === 'most') keys.sort(function(a,b) { return map[b].length - map[a].length; });
+  else keys.sort(function(a,b) { return a.localeCompare(b); });
+  var grid = document.getElementById('compgrid');
+  if (!keys.length) { grid.innerHTML = '<div style="padding:40px;color:var(--text2)">Компаній немає</div>'; return; }
+  var h = '';
+  for (var ki = 0; ki < keys.length; ki++) {
+    var name = keys[ki];
+    var ctcs = map[name];
+    var inds = [], brands = [];
+    for (var i = 0; i < ctcs.length; i++) {
+      if (ctcs[i].industry && inds.indexOf(ctcs[i].industry) < 0) inds.push(ctcs[i].industry);
+      if (ctcs[i].brands) {
+        var bb = ctcs[i].brands.split(',');
+        for (var b = 0; b < bb.length; b++) {
+          var btr = bb[b].trim();
+          if (btr && brands.indexOf(btr) < 0) brands.push(btr);
+        }
+      }
+    }
+    h += '<div class="cc">';
+    h += '<div class="cch">';
+    var firstClient = ctcs[0];
+    var cabt = indBgTxt(firstClient ? firstClient.industry : '');
+    h += '<div class="cav" style="background:' + cabt.bg + ';color:' + cabt.txt + '">' + String(name).slice(0,2).toUpperCase() + '</div>';
+    h += '<div style="flex:1"><div style="font-weight:500;font-size:14px">' + esc(name) + '</div>';
+    h += '<div style="margin-top:3px">';
+    for (var i = 0; i < inds.length; i++) h += mkTag(inds[i], indColor(inds[i])) + ' ';
+    h += '</div>';
+    if (brands.length) {
+      h += '<div style="margin-top:3px">';
+      for (var i = 0; i < brands.length; i++) h += mkTag(brands[i], 'pu') + ' ';
+      h += '</div>';
+    }
+    h += '</div>';
+    h += '<div style="text-align:right"><div style="font-size:20px;font-weight:600">' + ctcs.length + '</div><div style="font-size:10px;color:var(--text2)">контактів</div></div>';
+    h += '</div>';
+    h += '<div class="ccb">';
+    for (var i = 0; i < ctcs.length; i++) {
+      var ct = ctcs[i];
+      var phones = parseList(ct.phones || ct.phone || '');
+      var emails = parseList(ct.emails || ct.email || '');
+      var cname = ct.contact || ct.name || '—';
+      h += '<div class="cr">';
+      var ctbt = indBgTxt(ct.industry);
+      h += '<div class="av" style="width:22px;height:22px;font-size:9px;background:' + ctbt.bg + ';color:' + ctbt.txt + '">' + String(cname).slice(0,2).toUpperCase() + '</div>';
+      h += '<div style="flex:1"><div style="font-weight:500">' + esc(cname) + '</div><div style="font-size:11px;color:var(--text2)">' + esc(ct.role || '') + '</div></div>';
+      if (phones.length) h += '<a href="tel:' + esc(phones[0]) + '" title="' + esc(phones[0]) + '" style="color:var(--text2)"><i class="ti ti-phone" style="font-size:13px"></i></a>';
+      if (emails.length) h += '<a href="mailto:' + esc(emails[0]) + '" title="' + esc(emails[0]) + '" style="color:var(--text2);margin-left:4px"><i class="ti ti-mail" style="font-size:13px"></i></a>';
+      h += '<button class="ib" style="width:22px;height:22px;font-size:12px;margin-left:6px" data-action="open-client" data-id="' + esc(ct.id) + '"><i class="ti ti-eye"></i></button>';
+      h += '</div>';
+    }
+    h += '</div>';
+    h += '<div class="ccf"><button class="btn p s" data-action="add-to-company" data-name="' + esc(name) + '"><i class="ti ti-plus"></i> Додати контакт</button></div>';
+    h += '</div>';
+  }
+  grid.innerHTML = h;
+}
+
+function addToCompany(name) {
+  openModal('client');
+  setTimeout(function() {
+    var inp = document.getElementById('fname');
+    if (inp) { inp.value = name; acHide(); }
+  }, 80);
+}
+
+// ── PIPELINE ──
+function renderPipeline() {
+  var stages = gl('pipeStages');
+  var h = '';
+  for (var i = 0; i < stages.length; i++) {
+    var s = stages[i];
+    var dd = clients.filter(function(c) { return c.stage === s; });
+    h += '<div class="pcol">';
+    var pipeColors = ['#E6F1FB','#F1EFE8','#FAEEDA','#FAEEDA','#FAEEDA','#FAECE7','#EEEDFE','#EAF3DE','#EAF3DE','#F1EFE8','#FAEEDA','#EEEDFE'];
+    var pipeTexts  = ['#0C447C','#444441','#633806','#633806','#633806','#712B13','#3C3489','#27500A','#27500A','#444441','#633806','#3C3489'];
+    h += '<div class="ph" style="background:' + (pipeColors[i] || '#F1EFE8') + ';color:' + (pipeTexts[i] || '#444441') + '">' + esc(s);
+    h += '<span style="background:rgba(0,0,0,.1);border-radius:10px;padding:1px 7px;font-size:10px">' + dd.length + '</span></div>';
+    h += '<div class="pb" data-stage="' + esc(s) + '">';
+    for (var di = 0; di < dd.length; di++) {
+      var x = dd[di];
+      var pbt = indBgTxt(x.industry);
+      h += '<div class="dc" data-action="open-pipe" data-id="' + esc(x.id) + '" draggable="true" data-cid="' + esc(x.id) + '" style="border-left:3px solid ' + pbt.txt + '">';
+      h += '<div class="dn">' + esc(x.name) + '</div>';
+      h += '<div class="dm">' + esc(x.contact || '') + '</div>';
+      h += '</div>';
+    }
+    if (!dd.length) h += '<div class="pipe-empty" style="font-size:12px;color:var(--text2);padding:8px;text-align:center">Порожньо</div>';
+    h += '</div></div>';
+  }
+  document.getElementById('pipeboard').innerHTML = h;
+  initDragDrop();
+}
+
+// ── PROPOSALS ──
+function renderProposals() {
+  var tbody = document.getElementById('ptbody');
+  if (!proposals.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text2)">КП ще немає</td></tr>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < proposals.length; i++) {
+    var p = proposals[i];
+    var isOd = p.status === 'Прострочено';
+    h += '<tr>';
+    h += '<td style="font-weight:500">' + esc(p.client || '—') + '</td>';
+    h += '<td>' + fmtMoney(p.amount) + '</td>';
+    h += '<td>' + mkTag(p.ver || '—', 'gy') + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(p.sent || '') + '</td>';
+    h += '<td style="font-size:12px;color:' + (isOd ? 'var(--red)' : 'var(--text2)') + '">' + fmtDate(p.deadline || '') + '</td>';
+    h += '<td>' + mkTag(p.status || '—', PTAG[p.status] || 'gy') + '</td>';
+    h += '<td style="font-size:12px">' + esc(p.action || '—') + '</td>';
+    h += '<td><div class="ra"><button class="ib d" data-action="del-prop" data-id="' + esc(p.id) + '"><i class="ti ti-trash"></i></button></div></td>';
+    h += '</tr>';
+  }
+  tbody.innerHTML = h;
+  updateBadges();
+}
+
+function deleteProp(id) {
+  showCfm('Видалити КП?', 'КП буде видалено.', function() {
+    proposals = proposals.filter(function(p) { return String(p.id) !== String(id); });
+    renderProposals(); updateStats();
+    apiPost({sheet:'proposals', action:'delete', id:id});
+  });
+}
+
+// ── TASKS ──
+function renderTasks() {
+  var el = document.getElementById('tasklist');
+  if (!tasks.length) { el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2)">Завдань немає</div>'; return; }
+  var h = '';
+  for (var i = 0; i < tasks.length; i++) {
+    var t = tasks[i];
+    h += '<div class="task">';
+    h += '<div class="chk' + (t.done ? ' on' : '') + '" data-action="toggle-task" data-id="' + esc(t.id) + '">';
+    if (t.done) h += '<i class="ti ti-check" style="font-size:10px"></i>';
+    h += '</div>';
+    h += '<div class="tb">';
+    h += '<div class="tt' + (t.done ? ' on' : '') + '">' + esc(t.title || '');
+    if (t.clientName) h += ' <span style="font-size:11px;color:var(--blue)">· ' + esc(t.clientName) + '</span>';
+    h += '</div>';
+    h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
+    h += '</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:2px;position:absolute;right:14px;top:10px">';
+    h += '<button class="ib" style="width:22px;height:22px;font-size:12px" data-action="edit-task" data-id="' + esc(t.id) + '"><i class="ti ti-edit"></i></button>';
+    h += '<button class="tdel" style="display:flex;position:static;width:22px;height:22px" data-action="del-task" data-id="' + esc(t.id) + '"><i class="ti ti-x"></i></button>';
+    h += '</div>';
+    h += '</div>';
+  }
+  el.innerHTML = h;
+  updateBadges();
+  renderDashTasks();
+}
+
+// renderDashTasks is defined below
+
+function toggleTask(id) {
+  var t = tasks.find(function(x) { return String(x.id) === String(id); });
+  if (!t) return;
+  t.done = !t.done;
+  renderTasks();
+  apiPost({sheet:'tasks', action:'update', id:id, row:[t.id,t.title,t.due,t.manager,t.done,t.overdue,t.clientId||'',t.clientName||'']});
+}
+
+function editTask(id) {
+  var t = tasks.find(function(x) { return String(x.id) === String(id); });
+  if (!t) return;
+  curModal = 'task_edit';
+  curEditId = id;
+  document.getElementById('mttl').textContent = 'Редагувати завдання';
+  var mgrs = gl('MANAGERS');
+  var mopts = '<option value="">— обрати —</option>';
+  for (var i = 0; i < mgrs.length; i++) mopts += '<option value="' + esc(mgrs[i]) + '"' + (mgrs[i] === (t.manager||'') ? ' selected' : '') + '>' + esc(mgrs[i]) + '</option>';
+  var copts = '<option value="">— не прив язувати —</option>';
+  for (var i = 0; i < clients.length; i++) {
+    var sel = String(clients[i].id) === String(t.clientId) ? ' selected' : '';
+    copts += '<option value="' + esc(clients[i].id) + '"' + sel + '>' + esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '') + '</option>';
+  }
+  // Parse due date and time
+  var dueDate = '', dueTime = '';
+  if (t.due && t.due !== 'Без дедлайну') {
+    var parts = t.due.split(' о ');
+    if (parts[0]) {
+      var dp = parts[0].trim().split('.');
+      if (dp.length === 3) dueDate = dp[2] + '-' + dp[1] + '-' + dp[0];
+    }
+    if (parts[1]) dueTime = parts[1].trim();
+  }
+  var h = '';
+  h += '<div class="fr"><label class="flab">Клієнт</label><select class="fi" id="fclientlink" onchange="fillTaskTitle()">' + copts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Завдання *</label><input class="fi" id="ftitle" value="' + esc(t.title||'') + '"></div>';
+  h += '<div class="fg2">';
+  h += '<div class="fr"><label class="flab">Дата</label><input class="fi" id="fdue" type="date" value="' + esc(dueDate) + '"></div>';
+  h += '<div class="fr"><label class="flab">Час</label><input class="fi" id="ftime" type="time" value="' + esc(dueTime) + '"></div>';
+  h += '</div>';
+  h += '<div class="fr"><label class="flab">Відповідальний</label><select class="fi" id="fmgr2">' + mopts + '</select></div>';
+  document.getElementById('mbody').innerHTML = h;
+  document.getElementById('movl').classList.add('on');
+}
+
+function deleteTask(id) {
+  showCfm('Видалити завдання?', 'Завдання буде видалено.', function() {
+    tasks = tasks.filter(function(t) { return String(t.id) !== String(id); });
+    renderTasks(); updateStats();
+    apiPost({sheet:'tasks', action:'delete', id:id});
+  });
+}
+
+function fillTaskTitle() {
+  var sel = document.getElementById('fclientlink');
+  if (!sel || !sel.value) return;
+  var c = clients.find(function(x) { return x.id === sel.value; });
+  if (!c) return;
+  var inp = document.getElementById('ftitle');
+  if (inp && !inp.value) {
+    inp.value = 'Передзвонити – ' + c.name;
+    inp.focus();
+    inp.select();
+  }
+}
+
+// ── STATS ──
+function updateStats() {
+  var active = tasks.filter(function(t) { return !t.done; }).length;
+  var od = tasks.filter(function(t) { return !t.done && t.overdue; }).length;
+  var openKP = proposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var pipeClients = clients.filter(function(c) { return gl('pipeStages').indexOf(c.stage) >= 0; }).length;
+  document.getElementById('stc').textContent = clients.length;
+  document.getElementById('stk').textContent = openKP;
+  document.getElementById('stt').textContent = active;
+  document.getElementById('stod').textContent = od ? od + ' прострочено' : '';
+  document.getElementById('std').textContent = pipeClients;
+  updateBadges();
+}
+
+function updateBadges() {
+  document.getElementById('tkb').textContent = tasks.filter(function(t) { return !t.done; }).length;
+  document.getElementById('kpb').textContent = proposals.filter(function(p) { return p.status === 'Прострочено' || p.status === 'Очікування'; }).length;
+}
+
+// ── ACTIVITY ──
+function renderActivity() {
+  var el = document.getElementById('actfeed');
+  if (!acts.length) { el.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text2)">Активностей ще немає</div>'; return; }
+  var h = '';
+  for (var i = 0; i < Math.min(acts.length, 6); i++) {
+    h += '<div class="hi"><div class="hd" style="background:' + acts[i].color + '"></div>';
+    h += '<div><div class="ht">' + acts[i].text + '</div><div class="hdt">' + acts[i].date + '</div></div></div>';
+  }
+  el.innerHTML = h;
+}
+
+function addAct(text, color) {
+  acts.unshift({text: text, date: 'Щойно', color: color || '#185FA5'});
+  if (acts.length > 10) acts.pop();
+  renderActivity();
+}
+
+// ── ANALYTICS ──
+function renderAnalytics() {
+  document.getElementById('anc').textContent = clients.length;
+  document.getElementById('ank').textContent = proposals.length;
+  document.getElementById('ans').textContent = proposals.filter(function(p) { return p.status === 'Підписано'; }).length;
+  document.getElementById('and2').textContent = tasks.filter(function(t) { return t.done; }).length;
+  var indMap = {}, kpMap = {}, mgrMap = {};
+  for (var i = 0; i < clients.length; i++) { var k = clients[i].industry || 'Інше'; indMap[k] = (indMap[k] || 0) + 1; }
+  for (var i = 0; i < proposals.length; i++) { var k = proposals[i].status || '—'; kpMap[k] = (kpMap[k] || 0) + 1; }
+  for (var i = 0; i < clients.length; i++) { var m = clients[i].manager || '—'; if (!mgrMap[m]) mgrMap[m] = {c:0,t:0,d:0}; mgrMap[m].c++; }
+  for (var i = 0; i < tasks.length; i++) { var m = tasks[i].manager || '—'; if (!mgrMap[m]) mgrMap[m] = {c:0,t:0,d:0}; mgrMap[m].t++; if (tasks[i].done) mgrMap[m].d++; }
+  var imax = 1; for (var k in indMap) if (indMap[k] > imax) imax = indMap[k];
+  var kmax = 1; for (var k in kpMap) if (kpMap[k] > kmax) kmax = kpMap[k];
+  var IND_BAR_COLORS = {bl:'#185FA5',gr:'#27500A',pu:'#3C3489',am:'#633806',co:'#712B13',re:'#791F1F',gy:'#444441'};
+  var ih = ''; for (var k in indMap) { var ibc = IND_BAR_COLORS[indColor(k)] || '#185FA5'; ih += '<div class="br"><div class="bl2">' + mkTag(k, indColor(k)) + '</div><div class="bo"><div class="bi" style="width:' + Math.round(indMap[k]/imax*100) + '%;background:' + ibc + '"></div></div><div class="bv">' + indMap[k] + '</div></div>'; }
+  var kh = ''; for (var k in kpMap) { var col = k === 'Підписано' ? '#1D9E75' : (k === 'Прострочено' || k === 'Відмова') ? '#E24B4A' : 'var(--blue)'; kh += '<div class="br"><div class="bl2">' + esc(k) + '</div><div class="bo"><div class="bi" style="width:' + Math.round(kpMap[k]/kmax*100) + '%;background:' + col + '"></div></div><div class="bv">' + kpMap[k] + '</div></div>'; }
+  var mh = ''; for (var m in mgrMap) mh += '<tr><td><div class="fc">' + mkAv(m) + esc(m) + '</div></td><td>' + mgrMap[m].c + '</td><td>' + mgrMap[m].t + '</td><td>' + mgrMap[m].d + '</td></tr>';
+  document.getElementById('chind').innerHTML = ih;
+  document.getElementById('chkp').innerHTML = kh;
+  document.getElementById('mgrtbody').innerHTML = mh;
+}
+
+// ── SETTINGS ──
+function renderSettings() {
+  var h = '';
+  var keys = Object.keys(SETLBLS);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var items = gl(key);
+    h += '<div class="card" style="overflow:visible">';
+    h += '<div class="ch"><span class="ct">' + SETLBLS[key] + '</span><button class="btn p s" data-action="add-set" data-key="' + key + '"><i class="ti ti-plus"></i> Додати</button></div>';
+    h += '<div style="padding:8px">';
+    for (var j = 0; j < items.length; j++) {
+      h += '<div class="si">' + esc(items[j]);
+      h += '<div style="display:flex;gap:2px">';
+      if (j > 0)               h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-up" data-key="' + key + '" data-idx="' + j + '">↑</button>';
+      if (j < items.length-1)  h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-down" data-key="' + key + '" data-idx="' + j + '">↓</button>';
+      h += '<button class="ib d" style="width:20px;height:20px;font-size:11px" data-action="del-set" data-key="' + key + '" data-idx="' + j + '"><i class="ti ti-x"></i></button>';
+      h += '</div></div>';
+    }
+    h += '</div></div>';
+  }
+  document.getElementById('setgrid').innerHTML = h;
+}
+
+function addSItem(key) {
+  var val = prompt('Додати до "' + SETLBLS[key] + '"');
+  if (!val || !val.trim()) return;
+  val = val.trim();
+  if (gl(key).indexOf(val) >= 0) { alert('Вже є!'); return; }
+  if (!LISTS[key]) LISTS[key] = gl(key).slice();
+  LISTS[key].push(val);
+  saveLists(); renderSettings();
+}
+
+function rmSItem(key, i) {
+  if (!confirm('Видалити?')) return;
+  if (!LISTS[key]) LISTS[key] = gl(key).slice();
+  LISTS[key].splice(i, 1);
+  saveLists(); renderSettings();
+}
+
+function moveSItem(key, i, dir) {
+  if (!LISTS[key]) LISTS[key] = gl(key).slice();
+  var items = LISTS[key];
+  var ni = i + dir;
+  if (ni < 0 || ni >= items.length) return;
+  var tmp = items[i]; items[i] = items[ni]; items[ni] = tmp;
+  saveLists(); renderSettings();
+}
+
+function resetLists() {
+  if (!confirm('Скинути до стандартних?')) return;
+  LISTS = JSON.parse(JSON.stringify(DEFS));
+  saveLists(); renderSettings();
+}
+
+// ── AUTOCOMPLETE ──
+function acInput() {
+  var inp = document.getElementById('fname');
+  if (!inp) return;
+  var q = inp.value.trim().toLowerCase();
+  var list = document.getElementById('aclist');
+  if (!list) return;
+  if (!q) { acHide(); return; }
+  var names = [];
+  for (var i = 0; i < clients.length; i++) {
+    if (clients[i].name && names.indexOf(clients[i].name) < 0) names.push(clients[i].name);
+  }
+  var matches = names.filter(function(n) { return n.toLowerCase().indexOf(q) >= 0; });
+  if (!matches.length) { acHide(); return; }
+  list.style.display = 'block';
+  var h = '';
+  for (var i = 0; i < matches.length; i++) {
+    var n = matches[i];
+    var idx = n.toLowerCase().indexOf(q);
+    var hl = esc(n.slice(0,idx)) + '<b>' + esc(n.slice(idx, idx+q.length)) + '</b>' + esc(n.slice(idx+q.length));
+    h += '<div class="aci" data-action="ac-pick" data-val="' + esc(n) + '">' + hl + '</div>';
+  }
+  list.innerHTML = h;
+}
+
+function acPick(name) {
+  var inp = document.getElementById('fname');
+  if (inp) inp.value = name;
+  acHide();
+  var ex = null;
+  for (var i = 0; i < clients.length; i++) { if (clients[i].name === name) { ex = clients[i]; break; } }
+  if (ex) {
+    var ind = document.getElementById('find'); if (ind && !ind.value && ex.industry) ind.value = ex.industry;
+    var src = document.getElementById('fsrc'); if (src && !src.value && ex.source) src.value = ex.source;
+  }
+}
+
+function acHide() { var l = document.getElementById('aclist'); if (l) l.style.display = 'none'; }
+
+// ── MULTI PHONES/EMAILS ──
+function addPhone() {
+  var w = document.getElementById('phoneswrap'); if (!w) return;
+  var d = document.createElement('div'); d.className = 'mrow';
+  d.innerHTML = '<input class="fi mphone" placeholder="+38 050..." style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+  w.appendChild(d); d.querySelector('input').focus();
+}
+
+function addEmail() {
+  var w = document.getElementById('emailswrap'); if (!w) return;
+  var d = document.createElement('div'); d.className = 'mrow';
+  d.innerHTML = '<input class="fi memail" placeholder="email@company.ua" style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+  w.appendChild(d); d.querySelector('input').focus();
+}
+
+function getMulti(cls) {
+  var vals = [], els = document.querySelectorAll('.' + cls);
+  for (var i = 0; i < els.length; i++) { var v = els[i].value.trim(); if (v) vals.push(v); }
+  return vals;
+}
+
+// ── BUILD CLIENT FORM ──
+function buildClientForm(c) {
+  c = c || {};
+  var phones = parseList(c.phones || c.phone || '');
+  var emails = parseList(c.emails || c.email || '');
+  if (!phones.length) phones = [''];
+  if (!emails.length) emails = [''];
+  var ph = '';
+  for (var i = 0; i < phones.length; i++) {
+    ph += '<div class="mrow">';
+    ph += '<input class="fi mphone" value="' + esc(phones[i]) + '" placeholder="+38 050..." style="flex:1">';
+    if (i > 0) ph += '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+    ph += '</div>';
+  }
+  var em = '';
+  for (var i = 0; i < emails.length; i++) {
+    em += '<div class="mrow">';
+    em += '<input class="fi memail" value="' + esc(emails[i]) + '" placeholder="email@company.ua" style="flex:1">';
+    if (i > 0) em += '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+    em += '</div>';
+  }
+  var stages = gl('STAGES'), inds = gl('INDUSTRIES'), srcs = gl('SOURCES'), mgrs = gl('MANAGERS');
+  var stOpts = '<option value="">— обрати —</option>';
+  var indOpts = '<option value="">— обрати —</option>';
+  var srcOpts = '<option value="">— обрати —</option>';
+  var mgrOpts = '<option value="">— обрати —</option>';
+  for (var i = 0; i < stages.length; i++) stOpts += '<option value="' + esc(stages[i]) + '"' + (stages[i] === (c.stage||'') ? ' selected' : '') + '>' + esc(stages[i]) + '</option>';
+  for (var i = 0; i < inds.length; i++)   indOpts += '<option value="' + esc(inds[i]) + '"' + (inds[i] === (c.industry||'') ? ' selected' : '') + '>' + esc(inds[i]) + '</option>';
+  for (var i = 0; i < srcs.length; i++)   srcOpts += '<option value="' + esc(srcs[i]) + '"' + (srcs[i] === (c.source||'') ? ' selected' : '') + '>' + esc(srcs[i]) + '</option>';
+  for (var i = 0; i < mgrs.length; i++)   mgrOpts += '<option value="' + esc(mgrs[i]) + '"' + (mgrs[i] === (c.manager||'') ? ' selected' : '') + '>' + esc(mgrs[i]) + '</option>';
+  var h = '';
+  h += '<div class="fr"><label class="flab">Назва компанії *</label>';
+  h += '<div class="acw"><input class="fi" id="fname" value="' + esc(c.name||'') + '" placeholder="Напр. АТБ-Маркет" oninput="acInput()" autocomplete="off">';
+  h += '<div class="acl" id="aclist"></div></div></div>';
+  h += '<div class="fg2">';
+  h += '<div class="fr"><label class="flab">Контактна особа</label><input class="fi" id="fcontact" value="' + esc(c.contact||'') + '" placeholder="Ім\'я Прізвище"></div>';
+  h += '<div class="fr"><label class="flab">Посада</label><input class="fi" id="frole" value="' + esc(c.role||'') + '" placeholder="CMO..."></div>';
+  h += '</div>';
+  h += '<div class="fr"><label class="flab">Телефони</label><div id="phoneswrap">' + ph + '</div>';
+  h += '<button type="button" class="btn s" style="margin-top:4px" data-action="add-phone"><i class="ti ti-plus"></i> Додати телефон</button></div>';
+  h += '<div class="fr"><label class="flab">Email</label><div id="emailswrap">' + em + '</div>';
+  h += '<button type="button" class="btn s" style="margin-top:4px" data-action="add-email"><i class="ti ti-plus"></i> Додати email</button></div>';
+  h += '<div class="fg2">';
+  h += '<div class="fr"><label class="flab">Галузь</label><select class="fi" id="find">' + indOpts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Джерело</label><select class="fi" id="fsrc">' + srcOpts + '</select></div>';
+  h += '</div>';
+  h += '<div class="fg2">';
+  h += '<div class="fr"><label class="flab">Статус / Етап</label><select class="fi" id="fstage">' + stOpts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fmgr">' + mgrOpts + '</select></div>';
+  h += '</div>';
+  h += '<div class="fr"><label class="flab">Бренди компанії</label><input class="fi" id="fbrands" value="' + esc(c.brands||'') + '" placeholder="Pepsi, Lay\'s, 7UP"></div>';
+  h += '<div class="fr"><label class="flab">LinkedIn</label><input class="fi" id="fli" value="' + esc(c.linkedin||'') + '" placeholder="linkedin.com/in/..."></div>';
+  h += '<div class="fr"><label class="flab">Особливості</label><textarea class="fi" id="fnotes" rows="3">' + esc(c.notes||'') + '</textarea></div>';
+  h += '<div class="fr"><label class="flab">Нотатка в історію</label><input class="fi" id="fhist" placeholder="Напр: дзвінок, надіслали КП..."></div>';
+  return h;
+}
+
+// ── OPEN MODAL ──
+function openModal(type) {
+  curModal = type;
+  var titles = {client:'Новий контакт', task:'Нове завдання', proposal:'Нове КП', deal:'Додати лід у воронку'};
+  document.getElementById('mttl').textContent = titles[type] || type;
+  var h = '';
+  if (type === 'client') {
+    h = buildClientForm();
+  } else if (type === 'task') {
+    var mgrs = gl('MANAGERS');
+    var mopts = '<option value="">— обрати —</option>';
+    for (var i = 0; i < mgrs.length; i++) mopts += '<option value="' + esc(mgrs[i]) + '">' + esc(mgrs[i]) + '</option>';
+    var copts = '<option value="">— не прив язувати —</option>';
+    for (var i = 0; i < clients.length; i++) {
+      copts += '<option value="' + esc(clients[i].id) + '">';
+      copts += esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '');
+      copts += '</option>';
+    }
+    h += '<div class="fr"><label class="flab">Клієнт</label><select class="fi" id="fclientlink" onchange="fillTaskTitle()">' + copts + '</select></div>';
+    h += '<div class="fr"><label class="flab">Завдання *</label><input class="fi" id="ftitle" placeholder="Напр: Передзвонити, Надіслати КП..."></div>';
+    h += '<div class="fg2">';
+    h += '<div class="fr"><label class="flab">Дата</label><input class="fi" id="fdue" type="date" value="' + todayISO() + '"></div>';
+    h += '<div class="fr"><label class="flab">Час</label><input class="fi" id="ftime" type="time"></div>';
+    h += '</div>';
+    h += '<div class="fr"><label class="flab">Відповідальний</label><select class="fi" id="fmgr2">' + mopts + '</select></div>';
+  } else if (type === 'proposal') {
+    var compNames = [];
+    for (var i = 0; i < clients.length; i++) { if (compNames.indexOf(clients[i].name) < 0) compNames.push(clients[i].name); }
+    var copts2 = '<option value="">— обрати —</option>';
+    for (var i = 0; i < compNames.length; i++) copts2 += '<option value="' + esc(compNames[i]) + '">' + esc(compNames[i]) + '</option>';
+    var psts = gl('PROP_STATUSES');
+    var pstopts = '<option value="">— обрати —</option>';
+    for (var i = 0; i < psts.length; i++) pstopts += '<option value="' + esc(psts[i]) + '">' + esc(psts[i]) + '</option>';
+    h += '<div class="fg2">';
+    h += '<div class="fr"><label class="flab">Компанія *</label><select class="fi" id="fpcl">' + copts2 + '</select></div>';
+    h += '<div class="fr"><label class="flab">Сума (грн)</label><input class="fi" id="famt" type="number" placeholder="95000"></div>';
+    h += '</div>';
+    h += '<div class="fg2">';
+    h += '<div class="fr"><label class="flab">Версія</label><input class="fi" id="fver" placeholder="v1"></div>';
+    h += '<div class="fr"><label class="flab">Статус</label><select class="fi" id="fpst">' + pstopts + '</select></div>';
+    h += '</div>';
+    h += '<div class="fg2">';
+    h += '<div class="fr"><label class="flab">Дата відправки</label><input class="fi" id="fpsent" type="date"></div>';
+    h += '<div class="fr"><label class="flab">Дедлайн</label><input class="fi" id="fpddl" type="date"></div>';
+    h += '</div>';
+    h += '<div class="fr"><label class="flab">Наступна дія</label><input class="fi" id="faction" placeholder="Follow-up 10.06..."></div>';
+  } else if (type === 'deal') {
+    var copts3 = '<option value="">— оберіть клієнта —</option>';
+    for (var i = 0; i < clients.length; i++) {
+      copts3 += '<option value="' + esc(clients[i].id) + '">';
+      copts3 += esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '');
+      copts3 += '</option>';
+    }
+    var stages = gl('pipeStages');
+    var stopts = '<option value="">— оберіть етап —</option>';
+    for (var i = 0; i < stages.length; i++) stopts += '<option value="' + esc(stages[i]) + '">' + esc(stages[i]) + '</option>';
+    h += '<div class="fr"><label class="flab">Клієнт *</label><select class="fi" id="fdcl">' + copts3 + '</select></div>';
+    h += '<div class="fr"><label class="flab">Етап воронки *</label><select class="fi" id="fdstage">' + stopts + '</select></div>';
+    h += '<div style="padding:10px;background:var(--bg3);border-radius:var(--r);font-size:12px;color:var(--text2)">Змінить статус клієнта у воронці.</div>';
+  }
+  document.getElementById('mbody').innerHTML = h;
+  document.getElementById('movl').classList.add('on');
+  setTimeout(function() { var f = document.querySelector('#mbody .fi'); if (f) f.focus(); }, 50);
+}
+
+function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
+
+document.getElementById('movl').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.querySelector('#movl .modal').addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+// ── SAVE MODAL ──
+function saveModal() {
+  if (curModal === 'client' || curModal === 'client_edit') {
+    var name = (document.getElementById('fname') || {value:''}).value.trim();
+    if (!name) { alert('Введіть назву компанії'); return; }
+    var phones = JSON.stringify(getMulti('mphone'));
+    var emails  = JSON.stringify(getMulti('memail'));
+    var contact = gv('fcontact'), role = gv('frole'), linkedin = gv('fli');
+    var industry = gv('find') || 'Інше', source = gv('fsrc') || 'Інше';
+    var stage = gv('fstage') || 'Новий лід', manager = gv('fmgr');
+    var notes = gv('fnotes'), histNote = gv('fhist'), brands = gv('fbrands');
+    var today = new Date().toLocaleDateString('uk-UA');
+    if (curModal === 'client_edit') {
+      var c = clients.find(function(x) { return String(x.id) === String(curEditId); });
+      if (!c) return;
+      c.name=name; c.contact=contact; c.role=role;
+      c.phones=phones; c.phone=phones; c.emails=emails; c.email=emails;
+      c.linkedin=linkedin; c.manager=manager; c.brands=brands;
+      c.industry=industry; c.source=source; c.stage=stage;
+      c.notes=notes; c.last=today;
+      if (histNote) {
+        var hist = []; try { hist = JSON.parse(c.history || '[]'); } catch(e) {}
+        hist.unshift({text: histNote, date: today});
+        c.history = JSON.stringify(hist);
+      }
+      apiPost({sheet:'clients',action:'update',id:c.id,row:[c.id,c.name,c.contact,c.role,c.phones,c.emails,c.linkedin,c.industry,c.source,c.stage,c.last,c.notes,c.history||'[]',c.manager||'',c.brands||'']});
+      renderAll(); addAct('Оновлено: ' + esc(name), '#185FA5');
+      closeModal(); openClient(curEditId);
+    } else {
+      var id = uid();
+      clients.push({id:id,name:name,contact:contact,role:role,phones:phones,phone:phones,emails:emails,email:emails,linkedin:linkedin,manager:manager,brands:brands,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'});
+      apiPost({sheet:'clients',action:'add',row:[id,name,contact,role,phones,emails,linkedin,industry,source,stage,today,notes,'[]',manager,brands]});
+      renderAll(); addAct('Новий контакт: ' + esc(name), '#185FA5');
+      closeModal();
+    }
+  } else if (curModal === 'task_edit') {
+    var t = tasks.find(function(x) { return String(x.id) === String(curEditId); });
+    if (!t) return;
+    var title = gv('ftitle').trim();
+    if (!title) { alert('Введіть завдання'); return; }
+    var dateVal = gv('fdue'), timeVal = gv('ftime');
+    t.title = title;
+    t.due = dateVal ? fmtDate(dateVal) + (timeVal ? ' о ' + timeVal : '') : 'Без дедлайну';
+    t.manager = gv('fmgr2') || 'Не призначено';
+    var newClientId = gv('fclientlink');
+    if (newClientId) {
+      t.clientId = newClientId;
+      var cl = clients.find(function(x) { return x.id === newClientId; });
+      t.clientName = cl ? cl.name : '';
+    } else {
+      t.clientId = '';
+      t.clientName = '';
+    }
+    apiPost({sheet:'tasks', action:'update', id:t.id, row:[t.id,t.title,t.due,t.manager,t.done,t.overdue,t.clientId||'',t.clientName||'']});
+    renderTasks(); updateStats(); addAct('Оновлено завдання: ' + esc(title), '#185FA5');
+    closeModal();
+  } else if (curModal === 'task') {
+    var title = gv('ftitle').trim();
+    if (!title) { alert('Введіть завдання'); return; }
+    var dateVal = gv('fdue'), timeVal = gv('ftime');
+    var due = dateVal ? fmtDate(dateVal) + (timeVal ? ' о ' + timeVal : '') : 'Без дедлайну';
+    var mgr = gv('fmgr2') || 'Не призначено';
+    var clientId = gv('fclientlink'), clientName = '';
+    if (clientId) { var cl = clients.find(function(x) { return x.id === clientId; }); if (cl) clientName = cl.name; }
+    var id = uid();
+    tasks.push({id:id,title:title,due:due,manager:mgr,done:false,overdue:false,clientId:clientId,clientName:clientName});
+    apiPost({sheet:'tasks',action:'add',row:[id,title,due,mgr,false,false,clientId,clientName]});
+    renderTasks(); updateStats(); addAct('Завдання: ' + esc(title) + (clientName ? ' → ' + esc(clientName) : ''), '#185FA5');
+    closeModal();
+  } else if (curModal === 'proposal') {
+    var client = gv('fpcl');
+    if (!client) { alert('Оберіть компанію'); return; }
+    var id = uid(), amt = gv('famt'), ver = gv('fver') || 'v1';
+    var sent = gv('fpsent'), ddl = gv('fpddl');
+    var status = gv('fpst') || 'Готується', action = gv('faction') || '—';
+    proposals.push({id:id,client:client,amount:amt,ver:ver,sent:sent,deadline:ddl,status:status,action:action});
+    apiPost({sheet:'proposals',action:'add',row:[id,client,amt,ver,sent,ddl,status,action]});
+    renderProposals(); updateStats(); addAct('КП — ' + esc(client), '#185FA5');
+    closeModal();
+  } else if (curModal === 'deal') {
+    var clientId = gv('fdcl');
+    if (!clientId) { alert('Оберіть клієнта'); return; }
+    var stage = gv('fdstage');
+    if (!stage) { alert('Оберіть етап'); return; }
+    var c = clients.find(function(x) { return x.id === clientId; });
+    if (!c) return;
+    c.stage = stage; c.last = new Date().toLocaleDateString('uk-UA');
+    apiPost({sheet:'clients',action:'update',id:c.id,row:[c.id,c.name,c.contact,c.role,c.phones||'[]',c.emails||'[]',c.linkedin||'',c.industry||'',c.source||'',c.stage,c.last,c.notes||'',c.history||'[]',c.manager||'',c.brands||'']});
+    renderAll(); addAct(esc(c.name) + ' → ' + esc(stage), '#185FA5');
+    closeModal();
+  }
+}
+
+function closeDrawer() { document.getElementById('drawer').classList.remove('on'); }
+
+function showCfm(title, txt, cb) {
+  document.getElementById('cttl').textContent = title;
+  document.getElementById('ctxt').textContent = txt;
+  cfmCb = cb;
+  document.getElementById('covl').classList.add('on');
+  document.getElementById('cok').onclick = function() { closeCfm(); if (cfmCb) cfmCb(); };
+}
+function closeCfm() { document.getElementById('covl').classList.remove('on'); }
+document.getElementById('covl').addEventListener('click', function(e) {
+  if (e.target === this) closeCfm();
+});
+document.querySelector('#covl .cfm').addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+var now = new Date();
+var days = ['неділя','понеділок','вівторок','середа','четвер',"п'ятниця",'субота'];
+document.getElementById('ddate').textContent = days[now.getDay()] + ', ' + now.toLocaleDateString('uk-UA', {day:'numeric', month:'long'});
+
+renderAll();
+ss('spin', 'Підключення...');
+syncAll();
+</script>
+</body>
+</html>
