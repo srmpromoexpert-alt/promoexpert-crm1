@@ -731,12 +731,17 @@ function syncAll() {
     try {
       proposals = res[1].map(function(p) {
         p = normObj(p);
-        // backward compat
+        // ver column stores projectNum
         if (!p.projectNum && p.ver) p.projectNum = p.ver;
-        if (!p.projectNum && p.client && !p.amount) {
-          // old format: client=client, amount=amount — shuffle is wrong, skip
-        }
         if (!p.projectNum) p.projectNum = 'PRJ-' + String(p.id).slice(-4);
+        // fix ISO dates
+        if (p.deadline && p.deadline.indexOf && p.deadline.indexOf('T') >= 0) {
+          // deadline stored as ISO — keep as is, fmtDate handles it
+        }
+        // if action looks like ISO date, it was stored in wrong field — swap
+        if (p.action && p.action.indexOf && p.action.indexOf('T') >= 0 && !p.deadline) {
+          p.deadline = p.action; p.action = '';
+        }
         return p;
       });
     } catch(e) { console.error('proposals parse error', e); proposals = []; }
@@ -2358,17 +2363,17 @@ function saveModal() {
       if (furl) filesArr.push({name: fname || furl, url: furl});
     }
     var filesJson = JSON.stringify(filesArr);
-    var row = [projectNum, client, amt, ddl, status, action, manager, notes, filesJson];
+    var row = [client, amt, projectNum, '', ddl, status, action, manager, notes, filesJson];
     if (curModal === 'proposal_edit' && curEditId) {
       var p = proposals.find(function(x){ return String(x.id) === String(curEditId); });
       if (p) {
         p.projectNum=projectNum; p.client=client; p.amount=amt; p.deadline=ddl;
         p.status=status; p.action=action; p.manager=manager; p.notes=notes; p.files=filesJson;
-        apiPost({sheet:'proposals', action:'update', id:p.id, row:[p.id].concat(row)});
+        apiPost({sheet:'proposals', action:'update', id:p.id, row:[p.id, p.client, p.amount, p.projectNum, '', p.deadline, p.status, p.action, p.manager||'', p.notes||'', p.files||'[]']});
       }
     } else {
       var id = uid();
-      proposals.push({id:id, projectNum:projectNum, client:client, amount:amt, deadline:ddl, status:status, action:action, manager:manager, notes:notes, files:filesJson});
+      proposals.push({id:id, projectNum:projectNum, client:client, amount:amt, ver:projectNum, deadline:ddl, status:status, action:action, manager:manager, notes:notes, files:filesJson});
       apiPost({sheet:'proposals', action:'add', row:[id].concat(row)});
       addAct('Новий проект — ' + esc(projectNum) + ' ' + esc(client), '#185FA5');
     }
