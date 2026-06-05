@@ -1279,6 +1279,7 @@ function openClient(id) {
   h += '</div>';
   h += '</div>';
   document.getElementById('drbody').innerHTML = h;
+  _drawerJustOpened = true; setTimeout(function(){ _drawerJustOpened = false; }, 50);
   document.getElementById('drawer').classList.add('on');
   var qhi = document.getElementById('qhi');
   if (qhi) {
@@ -1655,6 +1656,7 @@ function openProject(id) {
     }
   }
   document.getElementById('drbody').innerHTML = h;
+  _drawerJustOpened = true; setTimeout(function(){ _drawerJustOpened = false; }, 50);
   document.getElementById('drawer').classList.add('on');
 }
 
@@ -2283,12 +2285,13 @@ function saveModal() {
 function closeDrawer() { document.getElementById('drawer').classList.remove('on'); }
 
 // ── DRAWER CLICK HANDLER ──
-var _mdInDrawer = false, _mdInModal = false;
+var _mdInDrawer = false, _mdInModal = false, _drawerJustOpened = false;
 document.addEventListener('mousedown', function(e) {
   _mdInDrawer = !!document.getElementById('drawer').contains(e.target);
   _mdInModal  = !!document.getElementById('movl').contains(e.target);
 });
 document.addEventListener('click', function(e) {
+  if (_drawerJustOpened) return;
   var drawer = document.getElementById('drawer');
   if (drawer && drawer.classList.contains('on') && !drawer.contains(e.target) && !_mdInDrawer) closeDrawer();
   if (e.target === document.getElementById('movl') && !_mdInModal) closeModal();
