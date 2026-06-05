@@ -719,8 +719,11 @@ function syncAll() {
     try {
       proposals = res[1].map(function(p) {
         p = normObj(p);
-        // backward compat: if no projectNum, use ver field or generate placeholder
+        // backward compat
         if (!p.projectNum && p.ver) p.projectNum = p.ver;
+        if (!p.projectNum && p.client && !p.amount) {
+          // old format: client=client, amount=amount — shuffle is wrong, skip
+        }
         if (!p.projectNum) p.projectNum = 'PRJ-' + String(p.id).slice(-4);
         return p;
       });
@@ -1551,14 +1554,16 @@ function renderProposals() {
     // Parse files
     var pfiles = [];
     try { pfiles = JSON.parse(p.files || '[]'); } catch(e) {}
-    h += '<tr style="cursor:pointer" data-action="open-project" data-id="' + esc(p.id) + '">';
-    h += '<td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 7px;border-radius:6px;font-weight:600">' + esc(p.projectNum || '—') + '</span></td>';
-    h += '<td style="font-weight:500">' + esc(p.client || '—') + '</td>';
-    h += '<td>' + fmtMoney(p.amount) + '</td>';
-    h += '<td style="font-size:12px;color:var(--text2)">' + esc(p.manager || '—') + '</td>';
-    h += '<td style="font-size:12px;color:' + (isOd ? 'var(--red)' : 'var(--text2)') + '">' + fmtDate(p.deadline || '') + '</td>';
-    h += '<td>' + mkTag(p.status || '—', propColor(p.status)) + '</td>';
-    h += '<td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.action || '—') + '</td>';
+    var pid = esc(p.id);
+    var clickTd = " onclick='openProject(\"" + pid + "\")' style='cursor:pointer'";
+    h += '<tr>';
+    h += '<td' + clickTd + '><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 7px;border-radius:6px;font-weight:600">' + esc(p.projectNum || '—') + '</span></td>';
+    h += '<td' + clickTd + ' style="font-weight:500">' + esc(p.client || '—') + '</td>';
+    h += '<td' + clickTd + '>' + fmtMoney(p.amount) + '</td>';
+    h += '<td' + clickTd + ' style="font-size:12px;color:var(--text2)">' + esc(p.manager || '—') + '</td>';
+    h += '<td' + clickTd + ' style="font-size:12px;color:' + (isOd ? 'var(--red)' : 'var(--text2)') + '">' + fmtDate(p.deadline || '') + '</td>';
+    h += '<td' + clickTd + '>' + mkTag(p.status || '—', propColor(p.status)) + '</td>';
+    h += '<td' + clickTd + ' style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.action || '—') + '</td>';
     h += '<td style="text-align:center">';
     if (pfiles.length) {
       for (var fi = 0; fi < pfiles.length; fi++) {
@@ -1573,14 +1578,6 @@ function renderProposals() {
   }
   tbody.innerHTML = h;
   updateBadges();
-  // Wire up row clicks for project table
-  var rows = tbody.querySelectorAll('tr[data-action="open-project"]');
-  rows.forEach(function(row) {
-    row.addEventListener('click', function(ev) {
-      if (ev.target.closest('button') || ev.target.closest('a')) return;
-      openProject(row.getAttribute('data-id'));
-    });
-  });
 }
 
 function deleteProp(id) {
@@ -2230,7 +2227,7 @@ function saveModal() {
       if (furl) filesArr.push({name: fname || furl, url: furl});
     }
     var filesJson = JSON.stringify(filesArr);
-    var row = [projectNum, client, amt, '', '', ddl, status, action, manager, notes, filesJson];
+    var row = [projectNum, client, amt, ddl, status, action, manager, notes, filesJson];
     if (curModal === 'proposal_edit' && curEditId) {
       var p = proposals.find(function(x){ return String(x.id) === String(curEditId); });
       if (p) {
