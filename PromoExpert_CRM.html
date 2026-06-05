@@ -575,8 +575,6 @@ function parseList(val) {
 document.addEventListener('click', function(e) {
   var el = e.target.closest('[data-action]');
   if (!el) return;
-  // Don't process clicks that should be handled by other listeners
-  if (e.defaultPrevented) return;
   var a = el.getAttribute('data-action');
   var id = el.getAttribute('data-id');
   if (a === 'open-client')   { openClient(id); }
@@ -647,6 +645,10 @@ document.addEventListener('click', function(e) {
     else inp && inp.focus();
   }
   if (a === 'open-pipe')     { openClient(id); }
+  if (e.target.closest('.fp-file-del')) {
+    var row = e.target.closest('.fp-file-row');
+    if (row) row.remove();
+  }
 });
 
 document.addEventListener('click', function(e) {
@@ -1057,7 +1059,10 @@ function initSS() {
       search.addEventListener('click', function(e) { e.stopPropagation(); });
     }
     opts.forEach(function(o) {
-      o.addEventListener('click', function(e) { e.stopPropagation(); selectOpt(o.getAttribute('data-value'), o.textContent); });
+      o.addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectOpt(o.getAttribute('data-value'), o.textContent.trim());
+      });
     });
     document.addEventListener('click', function(e) {
       if (!wrap.contains(e.target)) closeDD();
@@ -2265,10 +2270,7 @@ function openModal(type) {
     var btn = document.getElementById('fp-add-file');
     if (btn) btn.addEventListener('click', function() { addFileRow('', ''); });
   }, 80);
-  // fp-file-del delegation
-  document.addEventListener('click', function fpDel(e) {
-    if (e.target.closest('.fp-file-del')) { e.target.closest('.fp-file-row').remove(); }
-  });
+  // fp-file-del handled inline
 }
 
 function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
