@@ -1568,7 +1568,7 @@ function renderProposals() {
       h += '<span style="color:var(--text2);font-size:11px">—</span>';
     }
     h += '</td>';
-    h += '<td onclick="event.stopPropagation()"><div class="ra"><button class="ib" data-action="edit-prop" data-id="' + esc(p.id) + '"><i class="ti ti-edit"></i></button><button class="ib d" data-action="del-prop" data-id="' + esc(p.id) + '"><i class="ti ti-trash"></i></button></div></td>';
+    h += '<td><div class="ra"><button class="ib" data-action="edit-prop" data-id="' + esc(p.id) + '"><i class="ti ti-edit"></i></button><button class="ib d" data-action="del-prop" data-id="' + esc(p.id) + '"><i class="ti ti-trash"></i></button></div></td>';
     h += '</tr>';
   }
   tbody.innerHTML = h;
