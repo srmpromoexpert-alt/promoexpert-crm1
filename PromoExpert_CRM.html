@@ -61,6 +61,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .stat:hover{background:var(--bd);transition:background .15s}
 .tmpl-item:hover{background:var(--bg3)}
 .dash-proj-row:hover{background:var(--bg3)}
+/* ── SEARCHABLE SELECT ── */
+.ss-wrap{position:relative}
+.ss-input-wrap{position:relative;display:flex;align-items:center}
+.ss-input{width:100%;padding-right:28px!important;cursor:pointer}
+.ss-arrow{position:absolute;right:9px;font-size:12px;color:var(--text2);pointer-events:none;transition:transform .15s}
+.ss-wrap.open .ss-arrow{transform:rotate(180deg)}
+.ss-dropdown{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--bg2);border:.5px solid var(--bd2);border-radius:var(--rl);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:200;max-height:220px;overflow-y:auto}
+.ss-option{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:.5px solid var(--bd)}
+.ss-option:last-child{border-bottom:none}
+.ss-option:hover,.ss-option.active{background:var(--bg3)}
+.ss-option.hidden{display:none}
+.ss-empty{padding:10px 12px;font-size:12px;color:var(--text2);text-align:center}
 /* card */
 .card{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
 .ch{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:.5px solid var(--bd)}
@@ -966,6 +978,88 @@ function restoreFilterState() {
   el = document.getElementById('cind');   if (el) el.value = _filterState.cind   || '';
 }
 
+// ── SEARCHABLE SELECT ──
+function mkSS(id, opts, current, ph) {
+  ph = ph || '— обрати —';
+  var curLabel = '';
+  for (var i = 0; i < opts.length; i++) {
+    if (opts[i].v === current || opts[i] === current) { curLabel = opts[i].l || opts[i]; break; }
+  }
+  var h = '<div class="ss-wrap" data-ss-id="' + id + '">';
+  h += '<div class="ss-input-wrap">';
+  h += '<input class="fi ss-input" placeholder="' + esc(ph) + '" value="' + esc(curLabel) + '" autocomplete="off" readonly>';
+  h += '<input type="hidden" id="' + id + '" value="' + esc(current||'') + '">';
+  h += '<i class="ti ti-chevron-down ss-arrow"></i>';
+  h += '</div>';
+  h += '<div class="ss-dropdown" style="display:none">';
+  h += '<div style="padding:6px 8px;border-bottom:.5px solid var(--bd)"><input class="fi ss-search" placeholder="Пошук..." style="width:100%;padding:5px 8px;font-size:12px" autocomplete="off"></div>';
+  if (!current) h += '<div class="ss-option" data-value="">' + esc(ph) + '</div>';
+  for (var i = 0; i < opts.length; i++) {
+    var v = opts[i].v !== undefined ? opts[i].v : opts[i];
+    var l = opts[i].l || opts[i];
+    h += '<div class="ss-option' + (v === current ? ' active' : '') + '" data-value="' + esc(v) + '">' + esc(l) + '</div>';
+  }
+  h += '<div class="ss-empty" style="display:none">Нічого не знайдено</div>';
+  h += '</div></div>';
+  return h;
+}
+
+function initSS() {
+  document.querySelectorAll('.ss-wrap').forEach(function(wrap) {
+    if (wrap._ssInited) return;
+    wrap._ssInited = true;
+    var inp    = wrap.querySelector('.ss-input');
+    var search = wrap.querySelector('.ss-search');
+    var dd     = wrap.querySelector('.ss-dropdown');
+    var hidden = wrap.querySelector('input[type=hidden]');
+    var opts   = wrap.querySelectorAll('.ss-option');
+    var empty  = wrap.querySelector('.ss-empty');
+
+    function openDD() {
+      document.querySelectorAll('.ss-wrap.open').forEach(function(w) { if (w !== wrap) closeDD2(w); });
+      wrap.classList.add('open');
+      dd.style.display = 'block';
+      if (search) { search.value = ''; search.focus(); filterOpts(''); }
+    }
+    function closeDD() {
+      wrap.classList.remove('open');
+      dd.style.display = 'none';
+    }
+    function closeDD2(w) { w.classList.remove('open'); w.querySelector('.ss-dropdown').style.display = 'none'; }
+
+    function filterOpts(q) {
+      var any = false;
+      opts.forEach(function(o) {
+        var match = o.textContent.toLowerCase().indexOf(q.toLowerCase()) >= 0;
+        o.classList.toggle('hidden', !match);
+        if (match) any = true;
+      });
+      if (empty) empty.style.display = any ? 'none' : 'block';
+    }
+
+    function selectOpt(val, label) {
+      hidden.value = val;
+      inp.value = label;
+      opts.forEach(function(o) { o.classList.toggle('active', o.getAttribute('data-value') === val); });
+      closeDD();
+      // trigger change for any listeners
+      hidden.dispatchEvent(new Event('change'));
+    }
+
+    inp.addEventListener('click', function(e) { e.stopPropagation(); wrap.classList.contains('open') ? closeDD() : openDD(); });
+    if (search) {
+      search.addEventListener('input', function() { filterOpts(this.value); });
+      search.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+    opts.forEach(function(o) {
+      o.addEventListener('click', function(e) { e.stopPropagation(); selectOpt(o.getAttribute('data-value'), o.textContent); });
+    });
+    document.addEventListener('click', function(e) {
+      if (!wrap.contains(e.target)) closeDD();
+    });
+  });
+}
+
 function renderAll() {
   saveFilterState();
   renderClients();
@@ -1337,8 +1431,17 @@ function openQuickTask(clientId) {
   closeDrawer();
   openModal('task');
   setTimeout(function() {
-    var sel = document.getElementById('fclientlink');
-    if (sel) { sel.value = clientId; fillTaskTitle(); }
+    var hidden = document.getElementById('fclientlink');
+    if (hidden) {
+      hidden.value = clientId;
+      var wrap = hidden.closest('.ss-wrap');
+      if (wrap) {
+        var c = clients.find(function(x){ return String(x.id) === String(clientId); });
+        var inp = wrap.querySelector('.ss-input');
+        if (inp && c) inp.value = c.name;
+      }
+      fillTaskTitle();
+    }
   }, 80);
 }
 
@@ -1361,8 +1464,16 @@ function openQuickTaskWithTitle(clientId, title) {
   closeDrawer();
   openModal('task');
   setTimeout(function() {
-    var sel = document.getElementById('fclientlink');
-    if (sel) { sel.value = clientId; }
+    var hidden = document.getElementById('fclientlink');
+    if (hidden) {
+      hidden.value = clientId;
+      var wrap = hidden.closest('.ss-wrap');
+      if (wrap) {
+        var c2 = clients.find(function(x){ return String(x.id) === String(clientId); });
+        var inp2 = wrap.querySelector('.ss-input');
+        if (inp2 && c2) inp2.value = c2.name;
+      }
+    }
     var titleInp = document.getElementById('ftitle');
     if (titleInp && title) {
       // title format: "Передзвонити – ClientName"
@@ -1583,7 +1694,7 @@ function renderProposals() {
 function deleteProp(id) {
   showCfm('Видалити проект?', 'Проект буде видалено.', function() {
     proposals = proposals.filter(function(p) { return String(p.id) !== String(id); });
-    renderProposals(); updateStats();
+    renderProposals(); updateStats(); renderDashKP();
     apiPost({sheet:'proposals', action:'delete', id:id});
   });
 }
@@ -1722,7 +1833,7 @@ function editTask(id) {
     if (parts[1]) dueTime = parts[1].trim();
   }
   var h = '';
-  h += '<div class="fr"><label class="flab">Клієнт</label><select class="fi" id="fclientlink" onchange="fillTaskTitle()">' + copts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Клієнт</label>' + mkSS('fclientlink', clients.map(function(c){return {v:String(c.id),l:c.name};}), '', 'Пошук клієнта...') + '</div>';
   h += '<div class="fr"><label class="flab">Завдання *</label><input class="fi" id="ftitle" value="' + esc(t.title||'') + '"></div>';
   h += '<div class="fg2">';
   h += '<div class="fr"><label class="flab">Дата</label><input class="fi" id="fdue" type="date" value="' + esc(dueDate) + '"></div>';
@@ -1736,7 +1847,7 @@ function editTask(id) {
 function deleteTask(id) {
   showCfm('Видалити завдання?', 'Завдання буде видалено.', function() {
     tasks = tasks.filter(function(t) { return String(t.id) !== String(id); });
-    renderTasks(); updateStats();
+    renderTasks(); updateStats(); renderDashTasks();
     apiPost({sheet:'tasks', action:'delete', id:id});
   });
 }
@@ -1975,14 +2086,34 @@ function acHide() { var l = document.getElementById('aclist'); if (l) l.style.di
 
 // ── MULTI PHONES/EMAILS ──
 function addPhone() {
-  var w = document.getElementById('phoneswrap'); if (!w) return;
+  var w = document.getElementById('phoneswrap');
+  if (!w) { console.warn('phoneswrap not found'); return; }
+  // Add delete button to first row if missing
+  var first = w.querySelector('.mrow');
+  if (first && !first.querySelector('[data-action="del-mrow"]')) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'ib d'; btn.style.flexShrink = '0';
+    btn.setAttribute('data-action','del-mrow');
+    btn.innerHTML = '<i class="ti ti-x"></i>';
+    first.appendChild(btn);
+  }
   var d = document.createElement('div'); d.className = 'mrow';
   d.innerHTML = '<input class="fi mphone" placeholder="+38 050..." style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
   w.appendChild(d); d.querySelector('input').focus();
 }
 
 function addEmail() {
-  var w = document.getElementById('emailswrap'); if (!w) return;
+  var w = document.getElementById('emailswrap');
+  if (!w) { console.warn('emailswrap not found'); return; }
+  // Add delete button to first row if missing
+  var first = w.querySelector('.mrow');
+  if (first && !first.querySelector('[data-action="del-mrow"]')) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'ib d'; btn.style.flexShrink = '0';
+    btn.setAttribute('data-action','del-mrow');
+    btn.innerHTML = '<i class="ti ti-x"></i>';
+    first.appendChild(btn);
+  }
   var d = document.createElement('div'); d.className = 'mrow';
   d.innerHTML = '<input class="fi memail" placeholder="email@company.ua" style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
   w.appendChild(d); d.querySelector('input').focus();
@@ -2037,12 +2168,12 @@ function buildClientForm(c) {
   h += '<div class="fr"><label class="flab">Email</label><div id="emailswrap">' + em + '</div>';
   h += '<button type="button" class="btn s" style="margin-top:4px" data-action="add-email"><i class="ti ti-plus"></i> Додати email</button></div>';
   h += '<div class="fg2">';
-  h += '<div class="fr"><label class="flab">Галузь</label><select class="fi" id="find">' + indOpts + '</select></div>';
-  h += '<div class="fr"><label class="flab">Джерело</label><select class="fi" id="fsrc">' + srcOpts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Галузь</label>' + mkSS('find', inds.map(function(x){return {v:x,l:x};}), c.industry||'', '— обрати —') + '</div>';
+  h += '<div class="fr"><label class="flab">Джерело</label>' + mkSS('fsrc', srcs.map(function(x){return {v:x,l:x};}), c.source||'', '— обрати —') + '</div>';
   h += '</div>';
   h += '<div class="fg2">';
-  h += '<div class="fr"><label class="flab">Статус / Етап</label><select class="fi" id="fstage">' + stOpts + '</select></div>';
-  h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fmgr">' + mgrOpts + '</select></div>';
+  h += '<div class="fr"><label class="flab">Статус / Етап</label>' + mkSS('fstage', stages.map(function(x){return {v:x,l:x};}), c.stage||'', '— обрати —') + '</div>';
+  h += '<div class="fr"><label class="flab">Менеджер</label>' + mkSS('fmgr', mgrs.map(function(x){return {v:x,l:x};}), c.manager||'', '— обрати —') + '</div>';
   h += '</div>';
   h += '<div class="fr"><label class="flab">Бренди компанії</label><input class="fi" id="fbrands" value="' + esc(c.brands||'') + '" placeholder="Pepsi, Lay\'s, 7UP"></div>';
   h += '<div class="fr"><label class="flab">LinkedIn</label><input class="fi" id="fli" value="' + esc(c.linkedin||'') + '" placeholder="linkedin.com/in/..."></div>';
@@ -2069,7 +2200,7 @@ function openModal(type) {
       copts += esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '');
       copts += '</option>';
     }
-    h += '<div class="fr"><label class="flab">Клієнт</label><select class="fi" id="fclientlink" onchange="fillTaskTitle()">' + copts + '</select></div>';
+    h += '<div class="fr"><label class="flab">Клієнт</label>' + mkSS('fclientlink', clients.map(function(c){return {v:String(c.id),l:c.name};}), '', 'Пошук клієнта...') + '</div>';
     h += '<div class="fr"><label class="flab">Завдання *</label><input class="fi" id="ftitle" placeholder="Напр: Передзвонити, Надіслати КП..."></div>';
     h += '<div class="fg2">';
     h += '<div class="fr"><label class="flab">Дата</label><input class="fi" id="fdue" type="date" value="' + todayISO() + '"></div>';
@@ -2088,14 +2219,15 @@ function openModal(type) {
     var nextNum = 'PRJ-' + new Date().getFullYear() + '-' + String(proposals.length + 1).padStart(3, '0');
     h += '<div class="fg2">';
     h += '<div class="fr"><label class="flab">№ Проекту *</label><input class="fi" id="fpnum" placeholder="' + esc(nextNum) + '" value="' + esc(nextNum) + '"></div>';
-    h += '<div class="fr"><label class="flab">Статус</label><select class="fi" id="fpst">' + pstopts + '</select></div>';
+    h += '<div class="fr"><label class="flab">Статус</label>' + mkSS('fpst', gl('PROP_STATUSES').map(function(x){return {v:x,l:x};}), 'Готується', '') + '</div>';
     h += '</div>';
     h += '<div class="fg2">';
-    h += '<div class="fr"><label class="flab">Компанія *</label><select class="fi" id="fpcl">' + copts2 + '</select></div>';
+    var clOpts2 = clients.map(function(c){ return {v:String(c.id), l:c.name + (c.contact ? ' – '+c.contact : '')}; });
+    h += '<div class="fr"><label class="flab">Компанія *</label>' + mkSS('fpcl', clOpts2, '', 'Пошук компанії...') + '</div>';
     h += '<div class="fr"><label class="flab">Сума (грн)</label><input class="fi" id="famt" type="number" placeholder="95000"></div>';
     h += '</div>';
     h += '<div class="fg2">';
-    h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fpmgr"><option value="">—</option>' + gl('MANAGERS').map(function(m){return '<option>'+esc(m)+'</option>';}).join('') + '</select></div>';
+    h += '<div class="fr"><label class="flab">Менеджер</label>' + mkSS('fpmgr', gl('MANAGERS').map(function(x){return {v:x,l:x};}), '', '—') + '</div>';
     h += '<div class="fr"><label class="flab">Дедлайн</label><input class="fi" id="fpddl" type="date"></div>';
     h += '</div>';
     h += '<div class="fr"><label class="flab">Наступна дія</label><input class="fi" id="faction" placeholder="Follow-up 10.06..."></div>';
@@ -2118,7 +2250,11 @@ function openModal(type) {
   }
   document.getElementById('mbody').innerHTML = h;
   document.getElementById('movl').classList.add('on');
-  setTimeout(function() { var f = document.querySelector('#mbody .fi'); if (f) f.focus(); }, 50);
+  setTimeout(function() {
+    initSS();
+    var f = document.querySelector('#mbody input.fi:not(.ss-input):not(.ss-search)');
+    if (f) f.focus();
+  }, 60);
   // Wire up add-file button for proposal form
   setTimeout(function() {
     var btn = document.getElementById('fp-add-file');
@@ -2132,12 +2268,7 @@ function openModal(type) {
 
 function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
 
-document.getElementById('movl').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-document.querySelector('#movl .modal').addEventListener('click', function(e) {
-  e.stopPropagation();
-});
+// Modal close handled in unified click handler above
 
 // ── SAVE MODAL ──
 function saveModal() {
@@ -2193,7 +2324,7 @@ function saveModal() {
       t.clientName = '';
     }
     apiPost({sheet:'tasks', action:'update', id:t.id, row:[t.id,t.title,t.due,t.manager,t.done,t.overdue,t.clientId||'',t.clientName||'']});
-    renderTasks(); updateStats(); addAct('Оновлено завдання: ' + esc(title), '#185FA5');
+    renderTasks(); updateStats(); renderDashTasks(); addAct('Оновлено завдання: ' + esc(title), '#185FA5');
     closeModal();
   } else if (curModal === 'task') {
     var title = gv('ftitle').trim();
@@ -2206,7 +2337,7 @@ function saveModal() {
     var id = uid();
     tasks.push({id:id,title:title,due:due,manager:mgr,done:false,overdue:false,clientId:clientId,clientName:clientName});
     apiPost({sheet:'tasks',action:'add',row:[id,title,due,mgr,false,false,clientId,clientName]});
-    renderTasks(); updateStats(); addAct('Завдання: ' + esc(title) + (clientName ? ' → ' + esc(clientName) : ''), '#185FA5');
+    renderTasks(); updateStats(); renderDashTasks(); addAct('Завдання: ' + esc(title) + (clientName ? ' → ' + esc(clientName) : ''), '#185FA5');
     closeModal();
   } else if (curModal === 'proposal' || curModal === 'proposal_edit') {
     var client = gv('fpcl');
@@ -2241,7 +2372,7 @@ function saveModal() {
       apiPost({sheet:'proposals', action:'add', row:[id].concat(row)});
       addAct('Новий проект — ' + esc(projectNum) + ' ' + esc(client), '#185FA5');
     }
-    renderProposals(); updateStats();
+    renderProposals(); updateStats(); renderDashKP();
     closeModal();
   } else if (curModal === 'deal') {
     var clientId = gv('fdcl');
@@ -2259,15 +2390,35 @@ function saveModal() {
 
 function closeDrawer() { document.getElementById('drawer').classList.remove('on'); }
 
-// ── DRAWER CLICK HANDLER ──
-document.addEventListener('click', function(e) {
+// ── DRAWER & MODAL CLOSE HANDLER ──
+// Track mousedown origin to prevent closing when user is selecting text
+var _mousedownInDrawer = false;
+var _mousedownInModal  = false;
+
+document.addEventListener('mousedown', function(e) {
   var drawer = document.getElementById('drawer');
-  if (!drawer || !drawer.classList.contains('on')) return;
-  // If click is inside drawer (including all its children), don't close
-  if (drawer.contains(e.target)) return;
-  // Only close if clicking outside drawer area
-  closeDrawer();
-}, true); // Use capture phase
+  var modal  = document.getElementById('movl');
+  _mousedownInDrawer = !!(drawer && drawer.contains(e.target));
+  _mousedownInModal  = !!(modal  && modal.contains(e.target));
+});
+
+document.addEventListener('click', function(e) {
+  // ── Drawer ──
+  var drawer = document.getElementById('drawer');
+  if (drawer && drawer.classList.contains('on')) {
+    if (!drawer.contains(e.target) && !_mousedownInDrawer) {
+      closeDrawer();
+    }
+  }
+  // ── Modal overlay ──
+  var movl = document.getElementById('movl');
+  if (movl && movl.classList.contains('on')) {
+    var modal = movl.querySelector('.modal');
+    if (e.target === movl && !_mousedownInModal) {
+      closeModal();
+    }
+  }
+});
 
 function showCfm(title, txt, cb) {
   document.getElementById('cttl').textContent = title;
