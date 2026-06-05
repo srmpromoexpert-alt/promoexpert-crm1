@@ -58,6 +58,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .slbl{font-size:12px;color:var(--text2);margin-bottom:6px}
 .sval{font-size:22px;font-weight:600}
 .ssub{font-size:11px;color:var(--red);margin-top:4px}
+.stat:hover{background:var(--bd);transition:background .15s}
+.tmpl-item:hover{background:var(--bg3)}
 /* card */
 .card{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
 .ch{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:.5px solid var(--bd)}
@@ -180,7 +182,7 @@ tr:hover .ra{opacity:1}
       <button class="nb" data-sec="clients" onclick="goTo(this)"><i class="ti ti-users"></i> Контакти</button>
       <button class="nb" data-sec="companies" onclick="goTo(this)"><i class="ti ti-building"></i> Компанії</button>
       <button class="nb" data-sec="pipeline" onclick="goTo(this)"><i class="ti ti-git-branch"></i> Воронка</button>
-      <button class="nb" data-sec="proposals" onclick="goTo(this)"><i class="ti ti-file-description"></i> КП <span class="nbadge" id="kpb">0</span></button>
+      <button class="nb" data-sec="proposals" onclick="goTo(this)"><i class="ti ti-briefcase"></i> Проекти <span class="nbadge" id="kpb">0</span></button>
       <button class="nb" data-sec="tasks" onclick="goTo(this)"><i class="ti ti-checkbox"></i> Завдання <span class="nbadge" id="tkb">0</span></button>
       <button class="nb" data-sec="analytics" onclick="goTo(this)"><i class="ti ti-chart-bar"></i> Аналітика</button>
       <button class="nb" data-sec="settings" onclick="goTo(this)"><i class="ti ti-settings"></i> Налаштування</button>
@@ -209,12 +211,12 @@ tr:hover .ra{opacity:1}
       <div class="content">
         <div id="gsrch-results" style="display:none;margin-bottom:16px"></div>
         <div class="stats">
-          <div class="stat"><div class="slbl">Клієнтів</div><div class="sval" id="stc">0</div></div>
-          <div class="stat"><div class="slbl">Відкритих КП</div><div class="sval" id="stk">0</div></div>
-          <div class="stat"><div class="slbl">Активних завдань</div><div class="sval" id="stt">0</div><div class="ssub" id="stod"></div></div>
-          <div class="stat"><div class="slbl">Лідів у воронці</div><div class="sval" id="std">0</div></div>
+          <div class="stat" style="cursor:pointer" onclick="goToSec('clients')" title="Перейти до контактів"><div class="slbl">Клієнтів <i class="ti ti-arrow-right" style="font-size:10px;opacity:.5"></i></div><div class="sval" id="stc">0</div></div>
+          <div class="stat" style="cursor:pointer" onclick="goToSec('proposals')" title="Перейти до КП"><div class="slbl">Активних проектів <i class="ti ti-arrow-right" style="font-size:10px;opacity:.5"></i></div><div class="sval" id="stk">0</div></div>
+          <div class="stat" style="cursor:pointer" onclick="goToSec('tasks')" title="Перейти до завдань"><div class="slbl">Активних завдань <i class="ti ti-arrow-right" style="font-size:10px;opacity:.5"></i></div><div class="sval" id="stt">0</div><div class="ssub" id="stod"></div></div>
+          <div class="stat" style="cursor:pointer" onclick="goToSec('pipeline')" title="Перейти до воронки"><div class="slbl">Лідів у воронці <i class="ti ti-arrow-right" style="font-size:10px;opacity:.5"></i></div><div class="sval" id="std">0</div></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
           <div>
             <div class="card">
               <div class="ch" style="background:var(--rbg)">
@@ -240,12 +242,18 @@ tr:hover .ra{opacity:1}
           </div>
           <div>
             <div class="card">
-              <div class="ch"><span class="ct"><i class="ti ti-activity" style="vertical-align:-2px"></i> Активності</span></div>
-              <div id="actfeed" style="padding:0 16px"></div>
-            </div>
-            <div class="card">
               <div class="ch"><span class="ct"><i class="ti ti-clock" style="vertical-align:-2px"></i> Нещодавно додані</span><button class="lb" data-sec="clients" onclick="goTo(this)">Всі →</button></div>
               <div id="dash-recent"></div>
+            </div>
+            <div class="card" style="margin-top:0">
+              <div class="ch"><span class="ct"><i class="ti ti-briefcase" style="vertical-align:-2px"></i> Активні проекти</span><button class="lb" data-sec="proposals" onclick="goTo(this)">Всі →</button></div>
+              <div id="dash-kp"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="ch"><span class="ct"><i class="ti ti-activity" style="vertical-align:-2px"></i> Активності</span></div>
+              <div id="actfeed" style="padding:0 16px"></div>
             </div>
           </div>
         </div>
@@ -320,14 +328,14 @@ tr:hover .ra{opacity:1}
     <!-- PROPOSALS -->
     <div id="sec-proposals" class="sec">
       <div class="topbar">
-        <span class="ttl">Комерційні пропозиції</span>
-        <button class="btn p" onclick="openModal('proposal')"><i class="ti ti-plus"></i> Нове КП</button>
+        <span class="ttl">Проекти</span>
+        <button class="btn p" onclick="openModal('proposal')"><i class="ti ti-plus"></i> Новий проект</button>
       </div>
       <div class="content">
         <div class="card">
           <div class="tw">
             <table>
-              <thead><tr><th>Компанія</th><th>Сума</th><th>Версія</th><th>Відправлено</th><th>Дедлайн</th><th>Статус</th><th>Дія</th><th style="width:50px"></th></tr></thead>
+              <thead><tr><th style="width:110px">№ Проекту</th><th>Компанія</th><th>Сума</th><th>Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Наступна дія</th><th style="width:60px">Файли</th><th style="width:50px"></th></tr></thead>
               <tbody id="ptbody"></tbody>
             </table>
           </div>
@@ -350,13 +358,13 @@ tr:hover .ra{opacity:1}
       <div class="content">
         <div class="stats">
           <div class="stat"><div class="slbl">Клієнтів</div><div class="sval" id="anc">0</div></div>
-          <div class="stat"><div class="slbl">КП всього</div><div class="sval" id="ank">0</div></div>
+          <div class="stat"><div class="slbl">Проектів всього</div><div class="sval" id="ank">0</div></div>
           <div class="stat"><div class="slbl">Підписано</div><div class="sval" id="ans">0</div></div>
           <div class="stat"><div class="slbl">Завдань виконано</div><div class="sval" id="and2">0</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="card"><div class="ch"><span class="ct">За галуззю</span></div><div style="padding:16px"><div class="bars" id="chind"></div></div></div>
-          <div class="card"><div class="ch"><span class="ct">Статуси КП</span></div><div style="padding:16px"><div class="bars" id="chkp"></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">Статуси проектів</span></div><div style="padding:16px"><div class="bars" id="chkp"></div></div></div>
         </div>
         <div class="card" style="margin-top:16px">
           <div class="ch"><span class="ct">По менеджерах</span></div>
@@ -415,7 +423,7 @@ tr:hover .ra{opacity:1}
 </div>
 
 <script>
-var API = 'https://script.google.com/macros/s/AKfycbweF8q3Yli8cJfXcVYCGC6qkFxbSN3GAjcQSRIz27LdZ9TD7_BSLKCoPk6LeV5xAzDw/exec';
+var API = 'https://script.google.com/macros/s/AKfycbw1d9ADvf4iNruZXyiDZfmEJLmihUDmXWFWgrYGFLlGMX6oA-pqRbc2v0gE8nxLRA_o/exec';
 var clients = [], proposals = [], tasks = [], acts = [];
 var curModal = '', curEditId = null, cfmCb = null;
 
@@ -425,7 +433,8 @@ var DEFS = {
   SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
   PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
-  MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено']
+  MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено'],
+  TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок']
 };
 
 var LISTS;
@@ -434,10 +443,30 @@ catch(e) { LISTS = JSON.parse(JSON.stringify(DEFS)); }
 function gl(k) { return LISTS[k] || DEFS[k] || []; }
 function saveLists() { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); }
 
+// ── USER COLORS ──
+var COLOR_CATS = ['INDUSTRIES','STAGES','PROP_STATUSES','pipeStages'];
+var USER_COLORS = {};
+try { USER_COLORS = JSON.parse(localStorage.getItem('crm_colors') || '{}'); } catch(e) { USER_COLORS = {}; }
+function saveColors() { localStorage.setItem('crm_colors', JSON.stringify(USER_COLORS)); }
+function getUserColor(cat, name) {
+  return (USER_COLORS[cat] && USER_COLORS[cat][name]) ? USER_COLORS[cat][name] : null;
+}
+function setUserColor(cat, name, cls) {
+  if (!USER_COLORS[cat]) USER_COLORS[cat] = {};
+  USER_COLORS[cat][name] = cls;
+  saveColors();
+  renderAll();
+  renderSettings();
+}
+
 // colors defined inside renderPipeline
 // texts defined inside renderPipeline
-var STAG = {'Новий лід':'bl','Перший контакт':'gy','Прорахунок':'am','Відправлено КП':'am','Очікування відповіді':'am','Follow-up':'co','Погодження':'pu','Замовлення':'gr','Закрита угода':'gr','Відмова':'re'};
-var PTAG = {'Очікування':'am','На розгляді':'bl','Прострочено':'re','Погоджується':'pu','Готується':'gy','Підписано':'gr','Відмова':'re'};
+var STAG_DEF = {'Новий лід':'bl','Перший контакт':'gy','Прорахунок':'am','Відправлено КП':'am','Очікування відповіді':'am','Follow-up':'co','Погодження':'pu','Замовлення':'gr','Закрита угода':'gr','Відмова':'re'};
+var PTAG_DEF = {'Очікування':'am','На розгляді':'bl','Прострочено':'re','Погоджується':'pu','Готується':'gy','Підписано':'gr','Відмова':'re'};
+var STAG = STAG_DEF;
+var PTAG = PTAG_DEF;
+function stageColor(s) { return getUserColor('STAGES', s) || STAG_DEF[s] || 'gy'; }
+function propColor(s)  { return getUserColor('PROP_STATUSES', s) || PTAG_DEF[s] || 'gy'; }
 // ── INDUSTRY COLORS ──
 var IND_COLORS = {
   'Рітейл':           'bl',
@@ -472,6 +501,8 @@ function indBgTxt(ind) {
 
 function indColor(ind) {
   if (!ind) return 'gy';
+  var uc = getUserColor('INDUSTRIES', ind);
+  if (uc) return uc;
   if (IND_COLORS[ind]) return IND_COLORS[ind];
   if (_indColorCache[ind]) return _indColorCache[ind];
   var keys = Object.keys(_indColorCache);
@@ -480,7 +511,7 @@ function indColor(ind) {
   return color;
 }
 
-var SETLBLS = {INDUSTRIES:'Галузі',SOURCES:'Джерела',MANAGERS:'Менеджери',PROP_STATUSES:'Статуси КП',pipeStages:'Етапи воронки',STAGES:'Статуси клієнта'};
+var SETLBLS = {INDUSTRIES:'Галузі',SOURCES:'Джерела',MANAGERS:'Менеджери',PROP_STATUSES:'Статуси проектів',pipeStages:'Етапи воронки',STAGES:'Статуси клієнта',TASK_TEMPLATES:'Шаблони завдань'};
 
 function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2,6); }
 
@@ -573,6 +604,10 @@ document.addEventListener('click', function(e) {
   if (a === 'set-up')        { moveSItem(el.getAttribute('data-key'), parseInt(el.getAttribute('data-idx')), -1); }
   if (a === 'set-down')      { moveSItem(el.getAttribute('data-key'), parseInt(el.getAttribute('data-idx')), 1); }
   if (a === 'quick-hist')    { saveQuickHist(id); }
+  if (a === 'del-hist') {
+    var idx = parseInt(e.target.closest('[data-action]').getAttribute('data-idx'));
+    delHistItem(id, idx);
+  }
   if (a === 'dup-client')   { dupClient(id); }
   if (a === 'quick-kp')    {
     var cname = el.getAttribute('data-name');
@@ -584,11 +619,33 @@ document.addEventListener('click', function(e) {
     }, 80);
   }
   if (a === 'quick-task')    { openQuickTask(id); }
+  if (a === 'open-task-tmpl') { toggleTaskTmplDD(); }
+  if (a === 'pick-task-tmpl') {
+    var title = e.target.closest('[data-action]').getAttribute('data-title');
+    closeTaskTmplDD();
+    openQuickTaskWithTitle(id, title);
+  }
+  if (a === 'pick-task-tmpl-custom') {
+    var inp = document.getElementById('task-tmpl-custom');
+    var title = inp ? inp.value.trim() : '';
+    if (title) { closeTaskTmplDD(); openQuickTaskWithTitle(id, title); }
+    else inp && inp.focus();
+  }
   if (a === 'open-pipe')     { openClient(id); }
 });
 
 document.addEventListener('click', function(e) {
   if (e.target.id !== 'fname') acHide();
+});
+
+// ── COLOR PICKER BUTTONS ──
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.clr-btn');
+  if (!btn) return;
+  var cat  = btn.getAttribute('data-cat');
+  var name = btn.getAttribute('data-name');
+  var cls  = btn.getAttribute('data-cls');
+  if (cat && name && cls) setUserColor(cat, name, cls);
 });
 
 // ── NAV ──
@@ -603,6 +660,10 @@ function goTo(el) {
   if (id === 'companies')  renderCompanies();
   if (id === 'settings')   renderSettings();
   if (id === 'clients')    { populateFilters(); filterClients(); }
+}
+function goToSec(sec) {
+  var el = document.querySelector('[data-sec="' + sec + '"]');
+  if (el) goTo(el);
 }
 
 // ── SYNC ──
@@ -652,12 +713,29 @@ function syncAll() {
       return r;
     }
     try { clients   = res[0].map(normObj); } catch(e) { console.error('clients parse error', e); clients = []; }
-    try { proposals = res[1].map(normObj); } catch(e) { console.error('proposals parse error', e); proposals = []; }
+    try {
+      proposals = res[1].map(function(p) {
+        p = normObj(p);
+        // backward compat: if no projectNum, use ver field or generate placeholder
+        if (!p.projectNum && p.ver) p.projectNum = p.ver;
+        if (!p.projectNum) p.projectNum = 'PRJ-' + String(p.id).slice(-4);
+        return p;
+      });
+    } catch(e) { console.error('proposals parse error', e); proposals = []; }
     try {
       tasks = res[2].map(function(t) {
         t = normObj(t);
         t.done    = (t.done    === 'TRUE' || t.done    === true || t.done    === 'true');
         t.overdue = (t.overdue === 'TRUE' || t.overdue === true || t.overdue === 'true');
+        // Fallback: if clientId/clientName missing (empty headers in Sheets),
+        // try to get them from numeric keys (7th=clientId, 8th=clientName, 0-indexed)
+        if (!t.clientId && !t.clientName) {
+          var keys = Object.keys(t);
+          // Find keys that look like column indices (empty string or number)
+          var extraKeys = keys.filter(function(k) { return k === '' || (!isNaN(Number(k)) && k !== ''); });
+          if (!t.clientId)   t.clientId   = t['clientId']   || t['6'] || t[''] || '';
+          if (!t.clientName) t.clientName = t['clientName'] || t['7'] || '';
+        }
         return t;
       });
     } catch(e) { console.error('tasks parse error', e); tasks = []; }
@@ -758,8 +836,8 @@ function globalSearch() {
     return;
   }
 
-  var icons = {client:'ti-users', task:'ti-checkbox', proposal:'ti-file-description'};
-  var labels = {client:'Контакт', task:'Завдання', proposal:'КП'};
+  var icons = {client:'ti-users', task:'ti-checkbox', proposal:'ti-briefcase'};
+  var labels = {client:'Контакт', task:'Завдання', proposal:'Проект'};
   var h = '<div class="card"><div class="ch"><span class="ct">Результати пошуку (' + found.length + ')</span><button class="lb" onclick="clearSearch()">Закрити ×</button></div>';
   for (var i = 0; i < Math.min(found.length, 10); i++) {
     var r = found[i];
@@ -784,23 +862,28 @@ function clearSearch() {
 
 function mkTaskRow(t) {
   var h = '';
-  h += '<div class="task">';
+  h += '<div class="task" style="cursor:default">';
   h += '<div class="chk' + (t.done ? ' on' : '') + '" data-action="toggle-task" data-id="' + esc(t.id) + '">' + (t.done ? '<i class="ti ti-check" style="font-size:10px"></i>' : '') + '</div>';
   h += '<div class="tb">';
   h += '<div class="tt' + (t.done ? ' on' : '') + '">' + esc(t.title || '');
+  // Fix: find client by clientId first, then by name
   var tClientName = t.clientName || '';
-  // Try to find clientName if not set
-  if (!tClientName && t.clientId) {
-    var cl2 = clients.find(function(x) { return String(x.id) === String(t.clientId); });
+  var tClientId = t.clientId || '';
+  if (tClientId) {
+    var cl2 = clients.find(function(x) { return String(x.id) === String(tClientId); });
     if (cl2) tClientName = cl2.name;
   }
+  if (!tClientId && tClientName) {
+    var cl3 = clients.find(function(x) { return x.name === tClientName; });
+    if (cl3) tClientId = cl3.id;
+  }
   if (tClientName) {
-    var cl = clients.find(function(x) { return x.name === tClientName; });
-    var cid = cl ? cl.id : '';
-    h += ' <span data-action="open-client" data-id="' + esc(cid) + '" style="font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline">· ' + esc(tClientName) + '</span>';
+    h += ' <span data-action="open-client" data-id="' + esc(tClientId) + '" style="font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline">· ' + esc(tClientName) + '</span>';
   }
   h += '</div>';
-  h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
+  // Fix: format date properly (handles ISO format 2026-06-16T21:00:00.000Z)
+  var dueFmt = fmtDate(t.due) || t.due || '—';
+  h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(dueFmt) + '</span><span>' + esc(t.manager || '—') + '</span></div>';
   h += '</div>';
   h += '<button class="tdel" data-action="del-task" data-id="' + esc(t.id) + '"><i class="ti ti-x"></i></button>';
   h += '</div>';
@@ -809,11 +892,13 @@ function mkTaskRow(t) {
 
 function parseTaskDate(due) {
   if (!due || due === 'Без дедлайну') return null;
-  var s = String(due).split(' о ')[0].trim();
-  var m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  var s = String(due);
+  if (s.indexOf('T') >= 0) { var d = new Date(s); return isNaN(d.getTime()) ? null : d; }
+  var part = s.split(' о ')[0].trim();
+  var m = part.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
-  var d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
+  var d2 = new Date(part);
+  return isNaN(d2.getTime()) ? null : d2;
 }
 
 function isTaskOverdue(due) {
@@ -884,6 +969,7 @@ function renderAll() {
   renderDashTasks();
   renderActivity();
   renderRecentClients();
+  renderDashKP();
   updateStats();
   populateFilters();
   restoreFilterState();
@@ -906,12 +992,30 @@ function renderRecentClients() {
     h += '<div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div>';
     h += '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + esc(c.name) + '</div>';
     h += '<div style="font-size:11px;color:var(--text2)">' + esc(c.contact||'') + (c.contact&&c.role?' · ':'') + esc(c.role||'') + '</div></div>';
-    h += mkTag(c.stage||'—', STAG[c.stage]||'gy');
+    h += mkTag(c.stage||'—', stageColor(c.stage));
     h += '</div>';
   }
   if (show[show.length-1]) {
     // remove last border
     h = h.replace(/border-bottom:.5px solid var\(--bd\)([^"]*)"(?=[^>]*data-id="[^"]*">(?:(?!border-bottom).)*$)/,'');
+  }
+  el.innerHTML = h;
+}
+
+function renderDashKP() {
+  var el = document.getElementById('dash-kp');
+  if (!el) return;
+  var open = proposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; });
+  open = open.slice(0, 5);
+  if (!open.length) { el.innerHTML = '<div style="padding:12px 16px;font-size:13px;color:var(--text2)">Немає відкритих КП</div>'; return; }
+  var h = '';
+  for (var i = 0; i < open.length; i++) {
+    var p = open[i];
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:.5px solid var(--bd)">';
+    h += '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + esc(p.client||'—') + '</div>';
+    h += '<div style="font-size:11px;color:var(--text2)">' + esc(p.action||'—') + '</div></div>';
+    h += mkTag(p.status||'—', propColor(p.status));
+    h += '</div>';
   }
   el.innerHTML = h;
 }
@@ -927,7 +1031,7 @@ function renderClients(list) {
   var h = '';
   for (var i = 0; i < list.length; i++) {
     var c = list[i];
-    var st = STAG[c.stage] || 'gy';
+    var st = stageColor(c.stage);
     h += '<tr>';
     var cbt = indBgTxt(c.industry);
     h += '<td data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer"><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
@@ -1063,20 +1167,24 @@ function openClient(id) {
     for (var i = 0; i < relT.length; i++) {
       h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--bd);font-size:12px' + (relT[i].done ? ';color:var(--text2)' : '') + '">';
       h += (relT[i].done ? '<i class="ti ti-check" style="color:var(--blue)"></i>' : '<i class="ti ti-clock" style="color:var(--text2)"></i>');
-      h += ' ' + esc(relT[i].title || '') + '<span style="margin-left:auto;color:var(--text2)">' + esc(relT[i].due || '') + '</span></div>';
+      h += ' ' + esc(relT[i].title || '') + '<span style="margin-left:auto;color:var(--text2)">' + esc(fmtDate(relT[i].due) || relT[i].due || '') + '</span></div>';
     }
   }
   if (relP.length) {
-    h += '<div class="sl">КП (' + relP.length + ')</div>';
+    h += '<div class="sl">Проекти (' + relP.length + ')</div>';
     for (var i = 0; i < relP.length; i++) {
       h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:.5px solid var(--bd);font-size:12px">';
-      h += '<span>' + esc(relP[i].action || '—') + '</span>' + mkTag(relP[i].status || '—', PTAG[relP[i].status] || 'gy') + '</div>';
+      h += '<span>' + esc(relP[i].action || '—') + '</span>' + mkTag(relP[i].status || '—', propColor(relP[i].status) || 'gy') + '</div>';
     }
   }
   h += '<div class="sl">Історія</div>';
   if (hist.length) {
     for (var i = 0; i < hist.length; i++) {
-      h += '<div class="hi"><div class="hd"></div><div><div class="ht">' + esc(hist[i].text) + '</div><div class="hdt">' + esc(hist[i].date) + '</div></div></div>';
+      h += '<div class="hi" style="position:relative;padding-right:28px">';
+      h += '<div class="hd"></div>';
+      h += '<div style="flex:1"><div class="ht">' + esc(hist[i].text) + '</div><div class="hdt">' + esc(hist[i].date) + '</div></div>';
+      h += '<button class="ib d" data-action="del-hist" data-id="' + esc(id) + '" data-idx="' + i + '" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:20px;height:20px;font-size:11px;opacity:.3" title="Видалити"><i class="ti ti-x"></i></button>';
+      h += '</div>';
     }
   } else {
     h += '<div style="font-size:12px;color:var(--text2)">Нотаток ще немає</div>';
@@ -1100,13 +1208,29 @@ function openClient(id) {
   h += '<button class="btn p s" data-action="quick-hist" data-id="' + esc(id) + '"><i class="ti ti-send"></i></button>';
   h += '</div></div>';
 
+  // ── TASK TEMPLATES PANEL (inline, hidden by default) ──
+  var tmpls = gl('TASK_TEMPLATES');
+  h += '<div id="task-tmpl-dd" style="display:none;border-bottom:.5px solid var(--bd);background:var(--bg3)">';
+  h += '<div style="padding:6px 8px;display:flex;flex-wrap:wrap;gap:6px">';
+  for (var ti = 0; ti < tmpls.length; ti++) {
+    h += '<button class="tmpl-item" data-action="pick-task-tmpl" data-id="' + esc(id) + '" data-title="' + esc(tmpls[ti]) + '" style="padding:5px 12px;font-size:12px;border:.5px solid var(--bd2);border-radius:20px;background:var(--bg2);cursor:pointer;color:var(--text);display:flex;align-items:center;gap:5px">';
+    h += '<i class="ti ti-clipboard-list" style="font-size:11px;color:var(--blue)"></i>' + esc(tmpls[ti]);
+    h += '</button>';
+  }
+  h += '</div>';
+  h += '<div style="padding:6px 8px 8px;display:flex;gap:6px;align-items:center;border-top:.5px solid var(--bd)">';
+  h += '<input id="task-tmpl-custom" class="fi" placeholder="Своє завдання..." style="flex:1;padding:5px 10px;font-size:12px">';
+  h += '<button class="btn p s" data-action="pick-task-tmpl-custom" data-id="' + esc(id) + '" style="padding:5px 10px"><i class="ti ti-send" style="font-size:12px"></i></button>';
+  h += '</div>';
+  h += '</div>';
+
   // Action buttons
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">';
 
   // Task
-  h += '<button class="btn s" style="border:none;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px" data-action="quick-task" data-id="' + esc(id) + '">';
+  h += '<button class="btn s" data-action="open-task-tmpl" data-id="' + esc(id) + '" style="border:none;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px">';
   h += '<i class="ti ti-checkbox" style="font-size:18px;color:var(--blue)"></i>';
-  h += '<span style="font-size:11px">Завдання</span></button>';
+  h += '<span style="font-size:11px">Завдання <i class="ti ti-chevron-down" id="task-tmpl-chevron" style="font-size:9px"></i></span></button>';
 
   // Email
   var emailAddr = emails.length ? emails[0] : '';
@@ -1123,7 +1247,7 @@ function openClient(id) {
   // New KP
   h += '<button class="btn s" style="border:none;border-radius:0;padding:10px;justify-content:center;flex-direction:column;gap:3px;height:60px" data-action="quick-kp" data-id="' + esc(id) + '" data-name="' + esc(c.name) + '">';
   h += '<i class="ti ti-file-description" style="font-size:18px;color:var(--blue)"></i>';
-  h += '<span style="font-size:11px">Нове КП</span></button>';
+  h += '<span style="font-size:11px">Новий проект</span></button>';
 
   h += '</div>';
 
@@ -1205,6 +1329,60 @@ function openQuickTask(clientId) {
     var sel = document.getElementById('fclientlink');
     if (sel) { sel.value = clientId; fillTaskTitle(); }
   }, 80);
+}
+
+function delHistItem(clientId, idx) {
+  if (!confirm('Видалити цей запис з історії?')) return;
+  var c = clients.find(function(x) { return String(x.id) === String(clientId); });
+  if (!c) return;
+  var hist = [];
+  try { hist = JSON.parse(c.history || '[]'); } catch(e) {}
+  if (idx < 0 || idx >= hist.length) return;
+  hist.splice(idx, 1);
+  c.history = JSON.stringify(hist);
+  apiPost({sheet:'clients', action:'update', id:c.id, row:[c.id,c.name,c.contact,c.role,c.phones||'[]',c.emails||'[]',c.linkedin||'',c.industry||'',c.source||'',c.stage||'',c.last,c.notes||'',c.history,c.manager||'',c.brands||'']});
+  openClient(clientId);
+}
+
+function openQuickTaskWithTitle(clientId, title) {
+  var c = clients.find(function(x) { return String(x.id) === String(clientId); });
+  if (!c) return;
+  closeDrawer();
+  openModal('task');
+  setTimeout(function() {
+    var sel = document.getElementById('fclientlink');
+    if (sel) { sel.value = clientId; }
+    var titleInp = document.getElementById('ftitle');
+    if (titleInp && title) {
+      // title format: "Передзвонити – ClientName"
+      titleInp.value = title + (c.name ? ' – ' + c.name : '');
+    }
+  }, 80);
+}
+
+function toggleTaskTmplDD() {
+  var dd = document.getElementById('task-tmpl-dd');
+  var ch = document.getElementById('task-tmpl-chevron');
+  if (!dd) return;
+  var isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (ch) ch.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function closeTaskTmplDD() {
+  var dd = document.getElementById('task-tmpl-dd');
+  var ch = document.getElementById('task-tmpl-chevron');
+  if (dd) dd.style.display = 'none';
+  if (ch) ch.style.transform = '';
+  document.removeEventListener('click', closeTaskTmplDDOutside);
+}
+
+function closeTaskTmplDDOutside(e) {
+  var dd = document.getElementById('task-tmpl-dd');
+  var btn = e.target.closest('[data-action="open-task-tmpl"]');
+  if (dd && !dd.contains(e.target) && !btn) {
+    closeTaskTmplDD();
+  }
 }
 
 function editClient(id) {
@@ -1355,22 +1533,34 @@ function renderPipeline() {
 function renderProposals() {
   var tbody = document.getElementById('ptbody');
   if (!proposals.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text2)">КП ще немає</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text2)">Проектів ще немає</td></tr>';
     return;
   }
   var h = '';
   for (var i = 0; i < proposals.length; i++) {
     var p = proposals[i];
     var isOd = p.status === 'Прострочено';
-    h += '<tr>';
+    // Parse files
+    var pfiles = [];
+    try { pfiles = JSON.parse(p.files || '[]'); } catch(e) {}
+    h += '<tr style="cursor:pointer" data-action="open-project" data-id="' + esc(p.id) + '">';
+    h += '<td><span style="font-family:monospace;font-size:12px;background:var(--bg3);padding:2px 7px;border-radius:6px;font-weight:600">' + esc(p.projectNum || '—') + '</span></td>';
     h += '<td style="font-weight:500">' + esc(p.client || '—') + '</td>';
     h += '<td>' + fmtMoney(p.amount) + '</td>';
-    h += '<td>' + mkTag(p.ver || '—', 'gy') + '</td>';
-    h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(p.sent || '') + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + esc(p.manager || '—') + '</td>';
     h += '<td style="font-size:12px;color:' + (isOd ? 'var(--red)' : 'var(--text2)') + '">' + fmtDate(p.deadline || '') + '</td>';
-    h += '<td>' + mkTag(p.status || '—', PTAG[p.status] || 'gy') + '</td>';
-    h += '<td style="font-size:12px">' + esc(p.action || '—') + '</td>';
-    h += '<td><div class="ra"><button class="ib d" data-action="del-prop" data-id="' + esc(p.id) + '"><i class="ti ti-trash"></i></button></div></td>';
+    h += '<td>' + mkTag(p.status || '—', propColor(p.status)) + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.action || '—') + '</td>';
+    h += '<td style="text-align:center">';
+    if (pfiles.length) {
+      for (var fi = 0; fi < pfiles.length; fi++) {
+        h += '<a href="' + esc(pfiles[fi].url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc(pfiles[fi].name) + '" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--bg3);color:var(--blue);text-decoration:none;margin:1px"><i class="ti ti-paperclip" style="font-size:12px"></i></a>';
+      }
+    } else {
+      h += '<span style="color:var(--text2);font-size:11px">—</span>';
+    }
+    h += '</td>';
+    h += '<td onclick="event.stopPropagation()"><div class="ra"><button class="ib" data-action="edit-prop" data-id="' + esc(p.id) + '"><i class="ti ti-edit"></i></button><button class="ib d" data-action="del-prop" data-id="' + esc(p.id) + '"><i class="ti ti-trash"></i></button></div></td>';
     h += '</tr>';
   }
   tbody.innerHTML = h;
@@ -1378,11 +1568,82 @@ function renderProposals() {
 }
 
 function deleteProp(id) {
-  showCfm('Видалити КП?', 'КП буде видалено.', function() {
+  showCfm('Видалити проект?', 'Проект буде видалено.', function() {
     proposals = proposals.filter(function(p) { return String(p.id) !== String(id); });
     renderProposals(); updateStats();
     apiPost({sheet:'proposals', action:'delete', id:id});
   });
+}
+
+function editProp(id) {
+  var p = proposals.find(function(x) { return String(x.id) === String(id); });
+  if (!p) return;
+  curModal = 'proposal_edit';
+  curEditId = id;
+  // Open proposal modal first, then fill values
+  openModal('proposal');
+  curModal = 'proposal_edit';
+  curEditId = id;
+  setTimeout(function() {
+    var setv = function(el, v) { if (el) el.value = v || ''; };
+    setv(document.getElementById('fpnum'), p.projectNum);
+    setv(document.getElementById('fpcl'), p.client);
+    setv(document.getElementById('famt'), p.amount);
+    setv(document.getElementById('fpst'), p.status);
+    setv(document.getElementById('fpddl'), p.deadline);
+    setv(document.getElementById('faction'), p.action);
+    setv(document.getElementById('fpmgr'), p.manager);
+    setv(document.getElementById('fpnotes'), p.notes);
+    // Fill files
+    var pfiles = [];
+    try { pfiles = JSON.parse(p.files || '[]'); } catch(e) {}
+    pfiles.forEach(function(f) { addFileRow(f.name, f.url); });
+    document.getElementById('mttl').textContent = 'Редагувати проект';
+  }, 80);
+}
+
+function openProject(id) {
+  var p = proposals.find(function(x) { return String(x.id) === String(id); });
+  if (!p) return;
+  var pfiles = [];
+  try { pfiles = JSON.parse(p.files || '[]'); } catch(e) {}
+  document.getElementById('drttl').textContent = (p.projectNum || '') + ' — ' + (p.client || '');
+  document.getElementById('dredit').setAttribute('data-action', 'edit-prop');
+  document.getElementById('dredit').setAttribute('data-id', id);
+  document.getElementById('drdel').setAttribute('data-action', 'del-prop');
+  document.getElementById('drdel').setAttribute('data-id', id);
+  var h = '';
+  h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">';
+  h += '<div style="font-family:monospace;font-size:15px;font-weight:700;background:var(--bg3);padding:5px 12px;border-radius:8px">' + esc(p.projectNum || '—') + '</div>';
+  h += mkTag(p.status || '—', propColor(p.status));
+  h += '</div>';
+  if (p.client)  h += '<div class="fg"><div class="fl">Компанія</div><div class="fv">' + esc(p.client) + '</div></div>';
+  if (p.amount)  h += '<div class="fg"><div class="fl">Сума</div><div class="fv" style="font-weight:600">' + fmtMoney(p.amount) + '</div></div>';
+  if (p.manager) h += '<div class="fg"><div class="fl">Менеджер</div><div class="fv">' + esc(p.manager) + '</div></div>';
+  if (p.deadline)h += '<div class="fg"><div class="fl">Дедлайн</div><div class="fv">' + fmtDate(p.deadline) + '</div></div>';
+  if (p.action)  h += '<div class="fg"><div class="fl">Наступна дія</div><div class="fv">' + esc(p.action) + '</div></div>';
+  if (p.notes)   h += '<div class="fg"><div class="fl">Нотатки</div><div class="nb2">' + esc(p.notes) + '</div></div>';
+  if (pfiles.length) {
+    h += '<div class="sl">Файли (' + pfiles.length + ')</div>';
+    for (var fi = 0; fi < pfiles.length; fi++) {
+      h += '<a href="' + esc(pfiles[fi].url) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bd);color:var(--blue);text-decoration:none;font-size:13px">';
+      h += '<i class="ti ti-paperclip"></i>' + esc(pfiles[fi].name) + '</a>';
+    }
+  }
+  document.getElementById('drbody').innerHTML = h;
+  document.getElementById('drawer').classList.add('on');
+}
+
+function addFileRow(name, url) {
+  var list = document.getElementById('fp-files-list');
+  if (!list) return;
+  var row = document.createElement('div');
+  row.className = 'fp-file-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center';
+  row.innerHTML = '<input class="fi fp-fname" placeholder="Назва файлу" value="' + esc(name||'') + '" style="flex:1;padding:5px 8px;font-size:12px">' +
+    '<input class="fi fp-furl" placeholder="https://drive.google.com/..." value="' + esc(url||'') + '" style="flex:2;padding:5px 8px;font-size:12px">' +
+    '<button type="button" class="ib d fp-file-del" style="width:24px;height:24px;flex-shrink:0"><i class="ti ti-x"></i></button>';
+  list.appendChild(row);
 }
 
 // ── TASKS ──
@@ -1400,7 +1661,7 @@ function renderTasks() {
     h += '<div class="tt' + (t.done ? ' on' : '') + '">' + esc(t.title || '');
     if (t.clientName) h += ' <span style="font-size:11px;color:var(--blue)">· ' + esc(t.clientName) + '</span>';
     h += '</div>';
-    h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
+    h += '<div class="tm"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(fmtDate(t.due) || t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
     h += '</div>';
     h += '<div style="display:flex;flex-direction:column;gap:2px;position:absolute;right:14px;top:10px">';
     h += '<button class="ib" style="width:22px;height:22px;font-size:12px" data-action="edit-task" data-id="' + esc(t.id) + '"><i class="ti ti-edit"></i></button>';
@@ -1432,7 +1693,7 @@ function editTask(id) {
   var mgrs = gl('MANAGERS');
   var mopts = '<option value="">— обрати —</option>';
   for (var i = 0; i < mgrs.length; i++) mopts += '<option value="' + esc(mgrs[i]) + '"' + (mgrs[i] === (t.manager||'') ? ' selected' : '') + '>' + esc(mgrs[i]) + '</option>';
-  var copts = '<option value="">— не прив язувати —</option>';
+  var copts = '<option value="">— не прив`язувати —</option>';
   for (var i = 0; i < clients.length; i++) {
     var sel = String(clients[i].id) === String(t.clientId) ? ' selected' : '';
     copts += '<option value="' + esc(clients[i].id) + '"' + sel + '>' + esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '') + '</option>';
@@ -1540,26 +1801,92 @@ function renderAnalytics() {
 }
 
 // ── SETTINGS ──
+var COLOR_PALETTE = [
+  {cls:'bl', bg:'#E6F1FB', txt:'#0C447C', label:'Синій'},
+  {cls:'gr', bg:'#EAF3DE', txt:'#27500A', label:'Зелений'},
+  {cls:'pu', bg:'#EEEDFE', txt:'#3C3489', label:'Фіолетовий'},
+  {cls:'am', bg:'#FAEEDA', txt:'#633806', label:'Жовтий'},
+  {cls:'co', bg:'#FAECE7', txt:'#712B13', label:'Кораловий'},
+  {cls:'re', bg:'#FCEBEB', txt:'#791F1F', label:'Червоний'},
+  {cls:'gy', bg:'#F1EFE8', txt:'#444441', label:'Сірий'}
+];
+var COLOR_MAP = {};
+COLOR_PALETTE.forEach(function(c) { COLOR_MAP[c.cls] = c; });
+
+function mkColorDot(cls) {
+  var c = COLOR_MAP[cls] || COLOR_MAP.gy;
+  return '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + c.bg + ';border:2px solid ' + c.txt + ';flex-shrink:0"></span>';
+}
+
+function mkColorPicker(cat, name, currentCls) {
+  var h = '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">';
+  for (var i = 0; i < COLOR_PALETTE.length; i++) {
+    var c = COLOR_PALETTE[i];
+    var isActive = c.cls === currentCls;
+    var border = isActive ? '2px solid ' + c.txt : '2px solid transparent';
+    var shadow = isActive ? '0 0 0 1px ' + c.txt : 'none';
+    h += '<button class="clr-btn" data-cat="' + esc(cat) + '" data-name="' + esc(name) + '" data-cls="' + c.cls + '" title="' + c.label + '" style="width:22px;height:22px;border-radius:50%;background:' + c.bg + ';border:' + border + ';cursor:pointer;box-shadow:' + shadow + ';padding:0"></button>';
+  }
+  h += '</div>';
+  return h;
+}
+
 function renderSettings() {
   var h = '';
   var keys = Object.keys(SETLBLS);
+  var hasColors = {INDUSTRIES:1, STAGES:1, PROP_STATUSES:1, pipeStages:1};
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var items = gl(key);
+    var withColor = !!hasColors[key];
     h += '<div class="card" style="overflow:visible">';
     h += '<div class="ch"><span class="ct">' + SETLBLS[key] + '</span><button class="btn p s" data-action="add-set" data-key="' + key + '"><i class="ti ti-plus"></i> Додати</button></div>';
-    h += '<div style="padding:8px">';
-    for (var j = 0; j < items.length; j++) {
-      h += '<div class="si">' + esc(items[j]);
-      h += '<div style="display:flex;gap:2px">';
-      if (j > 0)               h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-up" data-key="' + key + '" data-idx="' + j + '">↑</button>';
-      if (j < items.length-1)  h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-down" data-key="' + key + '" data-idx="' + j + '">↓</button>';
-      h += '<button class="ib d" style="width:20px;height:20px;font-size:11px" data-action="del-set" data-key="' + key + '" data-idx="' + j + '"><i class="ti ti-x"></i></button>';
-      h += '</div></div>';
+    if (withColor) {
+      h += '<div style="padding:0">';
+      for (var j = 0; j < items.length; j++) {
+        var curCls;
+        if (key === 'STAGES')       curCls = getUserColor('STAGES', items[j]) || STAG_DEF[items[j]] || 'gy';
+        else if (key === 'PROP_STATUSES') curCls = getUserColor('PROP_STATUSES', items[j]) || PTAG_DEF[items[j]] || 'gy';
+        else curCls = getUserColor(key, items[j]) || indColor(items[j]);
+        var dotBg = (COLOR_MAP[curCls] || COLOR_MAP.gy).bg;
+        var dotTxt = (COLOR_MAP[curCls] || COLOR_MAP.gy).txt;
+        h += '<div style="padding:8px 12px;border-bottom:.5px solid var(--bd)">';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+        h += '<span class="tag" style="background:' + dotBg + ';color:' + dotTxt + '">' + esc(items[j]) + '</span>';
+        h += '<div style="margin-left:auto;display:flex;gap:2px">';
+        if (j > 0)              h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-up" data-key="' + key + '" data-idx="' + j + '">↑</button>';
+        if (j < items.length-1) h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-down" data-key="' + key + '" data-idx="' + j + '">↓</button>';
+        h += '<button class="ib d" style="width:20px;height:20px;font-size:11px" data-action="del-set" data-key="' + key + '" data-idx="' + j + '"><i class="ti ti-x"></i></button>';
+        h += '</div></div>';
+        h += mkColorPicker(key, items[j], curCls);
+        h += '</div>';
+      }
+      h += '</div>';
+    } else {
+      h += '<div style="padding:8px">';
+      for (var j = 0; j < items.length; j++) {
+        h += '<div class="si">' + esc(items[j]);
+        h += '<div style="display:flex;gap:2px">';
+        if (j > 0)              h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-up" data-key="' + key + '" data-idx="' + j + '">↑</button>';
+        if (j < items.length-1) h += '<button class="ib" style="width:20px;height:20px;font-size:11px" data-action="set-down" data-key="' + key + '" data-idx="' + j + '">↓</button>';
+        h += '<button class="ib d" style="width:20px;height:20px;font-size:11px" data-action="del-set" data-key="' + key + '" data-idx="' + j + '"><i class="ti ti-x"></i></button>';
+        h += '</div></div>';
+      }
+      h += '</div>';
     }
-    h += '</div></div>';
+    h += '</div>';
   }
+  // Reset colors button
+  h += '<div style="margin-top:8px"><button class="btn d" onclick="resetColors()"><i class="ti ti-refresh"></i> Скинути кольори до стандартних</button></div>';
   document.getElementById('setgrid').innerHTML = h;
+}
+
+function resetColors() {
+  if (!confirm('Скинути всі кольори до стандартних?')) return;
+  USER_COLORS = {};
+  saveColors();
+  renderAll();
+  renderSettings();
 }
 
 function addSItem(key) {
@@ -1714,7 +2041,7 @@ function buildClientForm(c) {
 // ── OPEN MODAL ──
 function openModal(type) {
   curModal = type;
-  var titles = {client:'Новий контакт', task:'Нове завдання', proposal:'Нове КП', deal:'Додати лід у воронку'};
+  var titles = {client:'Новий контакт', task:'Нове завдання', proposal:'Новий проект', deal:'Додати лід у воронку'};
   document.getElementById('mttl').textContent = titles[type] || type;
   var h = '';
   if (type === 'client') {
@@ -1723,7 +2050,7 @@ function openModal(type) {
     var mgrs = gl('MANAGERS');
     var mopts = '<option value="">— обрати —</option>';
     for (var i = 0; i < mgrs.length; i++) mopts += '<option value="' + esc(mgrs[i]) + '">' + esc(mgrs[i]) + '</option>';
-    var copts = '<option value="">— не прив язувати —</option>';
+    var copts = '<option value="">— не прив`язувати —</option>';
     for (var i = 0; i < clients.length; i++) {
       copts += '<option value="' + esc(clients[i].id) + '">';
       copts += esc(clients[i].name) + (clients[i].contact ? ' – ' + clients[i].contact : '');
@@ -1744,19 +2071,24 @@ function openModal(type) {
     var psts = gl('PROP_STATUSES');
     var pstopts = '<option value="">— обрати —</option>';
     for (var i = 0; i < psts.length; i++) pstopts += '<option value="' + esc(psts[i]) + '">' + esc(psts[i]) + '</option>';
+    // Auto-generate project number
+    var nextNum = 'PRJ-' + new Date().getFullYear() + '-' + String(proposals.length + 1).padStart(3, '0');
+    h += '<div class="fg2">';
+    h += '<div class="fr"><label class="flab">№ Проекту *</label><input class="fi" id="fpnum" placeholder="' + esc(nextNum) + '" value="' + esc(nextNum) + '"></div>';
+    h += '<div class="fr"><label class="flab">Статус</label><select class="fi" id="fpst">' + pstopts + '</select></div>';
+    h += '</div>';
     h += '<div class="fg2">';
     h += '<div class="fr"><label class="flab">Компанія *</label><select class="fi" id="fpcl">' + copts2 + '</select></div>';
     h += '<div class="fr"><label class="flab">Сума (грн)</label><input class="fi" id="famt" type="number" placeholder="95000"></div>';
     h += '</div>';
     h += '<div class="fg2">';
-    h += '<div class="fr"><label class="flab">Версія</label><input class="fi" id="fver" placeholder="v1"></div>';
-    h += '<div class="fr"><label class="flab">Статус</label><select class="fi" id="fpst">' + pstopts + '</select></div>';
-    h += '</div>';
-    h += '<div class="fg2">';
-    h += '<div class="fr"><label class="flab">Дата відправки</label><input class="fi" id="fpsent" type="date"></div>';
+    h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fpmgr"><option value="">—</option>' + gl('MANAGERS').map(function(m){return '<option>'+esc(m)+'</option>';}).join('') + '</select></div>';
     h += '<div class="fr"><label class="flab">Дедлайн</label><input class="fi" id="fpddl" type="date"></div>';
     h += '</div>';
     h += '<div class="fr"><label class="flab">Наступна дія</label><input class="fi" id="faction" placeholder="Follow-up 10.06..."></div>';
+    h += '<div class="fr"><label class="flab">Нотатки</label><textarea class="fi" id="fpnotes" rows="2" placeholder="Опис проекту..." style="resize:vertical"></textarea></div>';
+    h += '<div class="fr"><label class="flab">Файли / посилання</label><div id="fp-files-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>';
+    h += '<button type="button" class="btn s" id="fp-add-file" style="font-size:12px"><i class="ti ti-plus"></i> Додати посилання на файл</button></div>';
   } else if (type === 'deal') {
     var copts3 = '<option value="">— оберіть клієнта —</option>';
     for (var i = 0; i < clients.length; i++) {
@@ -1774,6 +2106,15 @@ function openModal(type) {
   document.getElementById('mbody').innerHTML = h;
   document.getElementById('movl').classList.add('on');
   setTimeout(function() { var f = document.querySelector('#mbody .fi'); if (f) f.focus(); }, 50);
+  // Wire up add-file button for proposal form
+  setTimeout(function() {
+    var btn = document.getElementById('fp-add-file');
+    if (btn) btn.addEventListener('click', function() { addFileRow('', ''); });
+  }, 80);
+  // fp-file-del delegation
+  document.addEventListener('click', function fpDel(e) {
+    if (e.target.closest('.fp-file-del')) { e.target.closest('.fp-file-row').remove(); }
+  });
 }
 
 function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
@@ -1854,15 +2195,40 @@ function saveModal() {
     apiPost({sheet:'tasks',action:'add',row:[id,title,due,mgr,false,false,clientId,clientName]});
     renderTasks(); updateStats(); addAct('Завдання: ' + esc(title) + (clientName ? ' → ' + esc(clientName) : ''), '#185FA5');
     closeModal();
-  } else if (curModal === 'proposal') {
+  } else if (curModal === 'proposal' || curModal === 'proposal_edit') {
     var client = gv('fpcl');
     if (!client) { alert('Оберіть компанію'); return; }
-    var id = uid(), amt = gv('famt'), ver = gv('fver') || 'v1';
-    var sent = gv('fpsent'), ddl = gv('fpddl');
-    var status = gv('fpst') || 'Готується', action = gv('faction') || '—';
-    proposals.push({id:id,client:client,amount:amt,ver:ver,sent:sent,deadline:ddl,status:status,action:action});
-    apiPost({sheet:'proposals',action:'add',row:[id,client,amt,ver,sent,ddl,status,action]});
-    renderProposals(); updateStats(); addAct('КП — ' + esc(client), '#185FA5');
+    var projectNum = (gv('fpnum') || '').trim();
+    if (!projectNum) { alert('Введіть номер проекту'); return; }
+    var amt = gv('famt'), ddl = gv('fpddl');
+    var status = gv('fpst') || 'Готується';
+    var action = gv('faction') || '';
+    var manager = gv('fpmgr') || '';
+    var notes = gv('fpnotes') || '';
+    // Collect files
+    var fileRows = document.querySelectorAll('#fp-files-list .fp-file-row');
+    var filesArr = [];
+    for (var fi = 0; fi < fileRows.length; fi++) {
+      var fname = fileRows[fi].querySelector('.fp-fname') ? fileRows[fi].querySelector('.fp-fname').value.trim() : '';
+      var furl  = fileRows[fi].querySelector('.fp-furl')  ? fileRows[fi].querySelector('.fp-furl').value.trim()  : '';
+      if (furl) filesArr.push({name: fname || furl, url: furl});
+    }
+    var filesJson = JSON.stringify(filesArr);
+    var row = [projectNum, client, amt, '', '', ddl, status, action, manager, notes, filesJson];
+    if (curModal === 'proposal_edit' && curEditId) {
+      var p = proposals.find(function(x){ return String(x.id) === String(curEditId); });
+      if (p) {
+        p.projectNum=projectNum; p.client=client; p.amount=amt; p.deadline=ddl;
+        p.status=status; p.action=action; p.manager=manager; p.notes=notes; p.files=filesJson;
+        apiPost({sheet:'proposals', action:'update', id:p.id, row:[p.id].concat(row)});
+      }
+    } else {
+      var id = uid();
+      proposals.push({id:id, projectNum:projectNum, client:client, amount:amt, deadline:ddl, status:status, action:action, manager:manager, notes:notes, files:filesJson});
+      apiPost({sheet:'proposals', action:'add', row:[id].concat(row)});
+      addAct('Новий проект — ' + esc(projectNum) + ' ' + esc(client), '#185FA5');
+    }
+    renderProposals(); updateStats();
     closeModal();
   } else if (curModal === 'deal') {
     var clientId = gv('fdcl');
@@ -1879,6 +2245,16 @@ function saveModal() {
 }
 
 function closeDrawer() { document.getElementById('drawer').classList.remove('on'); }
+
+// ── DRAWER CLICK HANDLER ──
+document.addEventListener('click', function(e) {
+  var drawer = document.getElementById('drawer');
+  if (!drawer || !drawer.classList.contains('on')) return;
+  // If click is inside drawer (including all its children), don't close
+  if (drawer.contains(e.target)) return;
+  // Only close if clicking outside drawer area
+  closeDrawer();
+}, true); // Use capture phase
 
 function showCfm(title, txt, cb) {
   document.getElementById('cttl').textContent = title;
