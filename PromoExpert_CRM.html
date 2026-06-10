@@ -353,7 +353,7 @@ tr:hover .ra{opacity:1}
           </div>
           <div class="tw">
             <table>
-              <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Джерело</th><th>Статус</th><th>Дата</th><th style="width:70px"></th></tr></thead>
+              <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Теги</th><th>Джерело</th><th>Статус</th><th>Дата</th><th style="width:70px"></th></tr></thead>
               <tbody id="ctbody"></tbody>
             </table>
           </div>
@@ -597,7 +597,8 @@ var DEFS = {
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
   PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
   MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено'],
-  TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок']
+  TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок'],
+  TAGS: ['Битова хімія','Снеки','Молочка','Кондитерка','Преміум','Масмаркет','Дистриб\'ютор','Імпортер','Локальний виробник']
 };
 
 var LISTS;
@@ -674,7 +675,7 @@ function indColor(ind) {
   return color;
 }
 
-var SETLBLS = {INDUSTRIES:'Галузі',SOURCES:'Джерела',MANAGERS:'Менеджери',PROP_STATUSES:'Статуси проектів',pipeStages:'Етапи воронки',STAGES:'Статуси клієнта',TASK_TEMPLATES:'Шаблони завдань'};
+var SETLBLS = {INDUSTRIES:'Галузі',SOURCES:'Джерела',MANAGERS:'Менеджери',PROP_STATUSES:'Статуси проектів',pipeStages:'Етапи воронки',STAGES:'Статуси клієнта',TASK_TEMPLATES:'Шаблони завдань',TAGS:'Теги клієнтів'};
 
 function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2,6); }
 
@@ -934,15 +935,16 @@ function buildClientRow(c) {
     c.notes      || '',
     c.history    || '[]',
     c.manager    || '',
-    c.brands     || ''
+    c.brands     || '',
+    c.tags       || ''
   ];
 }
 
 function syncAll() {
   ss('spin', 'Синхронізація...');
   Promise.all([apiGet('clients'), apiGet('proposals'), apiGet('tasks')]).then(function(res) {
-    // Колонки clients: 0=id,1=name,2=contact,3=role,4=phones,5=emails,6=linkedin,7=industry,8=source,9=stage,10=last,11=notes,12=history,13=manager,14=brands
-    var CLIENT_COLS = ['id','name','contact','role','phones','emails','linkedin','industry','source','stage','last','notes','history','manager','brands'];
+    // Колонки clients: 0=id,1=name,2=contact,3=role,4=phones,5=emails,6=linkedin,7=industry,8=source,9=stage,10=last,11=notes,12=history,13=manager,14=brands,15=tags
+    var CLIENT_COLS = ['id','name','contact','role','phones','emails','linkedin','industry','source','stage','last','notes','history','manager','brands','tags'];
     // Колонки proposals: 0=id,1=client,2=amount,3=projectNum,4=ver,5=deadline,6=status,7=action,8=manager,9=notes,10=files
     var PROPOSAL_COLS = ['id','client','amount','projectNum','ver','deadline','status','action','manager','notes','files'];
     // Колонки tasks: 0=id,1=title,2=due,3=manager,4=done,5=overdue,6=clientId,7=clientName,8=doneDate
@@ -963,10 +965,12 @@ function syncAll() {
     try {
       clients = res[0].map(function(raw) {
         var c = normObj(raw, CLIENT_COLS);
+        // Sheets має phone/email (без s) — нормалізуємо
         c.phones = safePhones(c.phones || c.phone || '');
         c.phone  = c.phones;
         c.emails = safeEmails(c.emails || c.email || '');
         c.email  = c.emails;
+        c.tags   = c.tags || '';
         return c;
       });
     } catch(e) { console.error('clients parse error', e); clients = []; }
@@ -1299,6 +1303,8 @@ function renderClients(list) {
     h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
     h += '<td><div>' + esc(c.contact || '') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
     h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
+    var cTags = (c.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
+    h += '<td style="max-width:150px"><div style="display:flex;flex-wrap:wrap;gap:3px">' + cTags.map(function(t){ return '<span style="padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--pbg);color:var(--ptxt);white-space:nowrap">'+esc(t)+'</span>'; }).join('') + '</div></td>';
     h += '<td style="font-size:12px;color:var(--text2)">' + esc(c.source || '—') + '</td>';
     h += '<td>' + mkTag(c.stage || '—', st) + '</td>';
     h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
@@ -1435,6 +1441,16 @@ function openClient(id) {
   if (c.industry) h += '<div class="fg"><div class="fl">Галузь</div><div class="fv">' + mkTag(c.industry, indColor(c.industry)) + '</div></div>';
   if (c.source)   h += '<div class="fg"><div class="fl">Джерело</div><div class="fv">' + esc(c.source) + '</div></div>';
   if (c.brands)   h += '<div class="fg"><div class="fl">Бренди</div><div class="fv">' + esc(c.brands) + '</div></div>';
+  if (c.tags) {
+    var tArr = c.tags.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+    if (tArr.length) {
+      h += '<div class="fg"><div class="fl">Теги</div><div class="fv" style="display:flex;flex-wrap:wrap;gap:4px">';
+      for (var i = 0; i < tArr.length; i++) {
+        h += '<span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--pbg);color:var(--ptxt);border:.5px solid var(--pbd,var(--bd2))">' + esc(tArr[i]) + '</span>';
+      }
+      h += '</div></div>';
+    }
+  }
   if (c.notes)    h += '<div class="fg"><div class="fl">Особливості</div><div class="nb2">' + esc(c.notes) + '</div></div>';
   if (relT.length) {
     h += '<div class="sl">Завдання (' + relT.length + ')</div>';
@@ -2660,6 +2676,21 @@ function getMulti(cls) {
   return vals;
 }
 
+function toggleTagBtn(btn) {
+  var isOn = btn.classList.toggle('on');
+  btn.style.background = isOn ? 'var(--blue)' : 'var(--bg3)';
+  btn.style.color      = isOn ? '#fff' : 'var(--text2)';
+  btn.style.borderColor= isOn ? 'var(--blue)' : 'var(--bd2)';
+}
+
+function getSelectedTags() {
+  var container = document.getElementById('mbody') || document;
+  var btns = container.querySelectorAll('.tag-btn.on');
+  var tags = [];
+  for (var i = 0; i < btns.length; i++) tags.push(btns[i].getAttribute('data-tag'));
+  return tags.join(',');
+}
+
 // ── BUILD CLIENT FORM ──
 var PHONE_LABELS = ['Мобільний','Робочий','Особистий','Telegram','Viber','WhatsApp','Інше'];
 var EMAIL_LABELS = ['Робочий','Особистий','Інше'];
@@ -2725,6 +2756,15 @@ function buildClientForm(c) {
   h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fmgr">' + mgrOpts + '</select></div>';
   h += '</div>';
   h += '<div class="fr"><label class="flab">Бренди компанії</label><input class="fi" id="fbrands" value="' + esc(c.brands||'') + '" placeholder="Pepsi, Lay\'s, 7UP"></div>';
+  h += '<div class="fr"><label class="flab">Теги</label>';
+  h += '<div id="tags-wrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0">';
+  var allTags = gl('TAGS');
+  var selTags = (c.tags || '').split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+  for (var i = 0; i < allTags.length; i++) {
+    var isOn = selTags.indexOf(allTags[i]) >= 0;
+    h += '<button type="button" class="tag-btn' + (isOn?' on':'') + '" data-tag="' + esc(allTags[i]) + '" onclick="toggleTagBtn(this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:.5px solid ' + (isOn?'var(--blue)':'var(--bd2)') + ';background:' + (isOn?'var(--blue)':'var(--bg3)') + ';color:' + (isOn?'#fff':'var(--text2)') + ';font-family:inherit;transition:all .15s">' + esc(allTags[i]) + '</button>';
+  }
+  h += '</div></div>';
   h += '<div class="fr"><label class="flab">LinkedIn</label><input class="fi" id="fli" value="' + esc(c.linkedin||'') + '" placeholder="linkedin.com/in/..."></div>';
   h += '<div class="fr"><label class="flab">Особливості</label><textarea class="fi" id="fnotes" rows="3">' + esc(c.notes||'') + '</textarea></div>';
   h += '<div class="fr"><label class="flab">Нотатка в історію</label><input class="fi" id="fhist" placeholder="Напр: дзвінок, надіслали КП..."></div>';
@@ -2989,6 +3029,7 @@ function saveModal() {
     var industry = gv('find') || 'Інше', source = gv('fsrc') || 'Інше';
     var stage = gv('fstage') || 'Новий лід', manager = gv('fmgr');
     var notes = gv('fnotes'), histNote = gv('fhist'), brands = gv('fbrands');
+    var tags = getSelectedTags();
     var today = new Date().toLocaleDateString('uk-UA');
     if (curModal === 'client_edit') {
       var c = clients.find(function(x) { return String(x.id) === String(curEditId); });
@@ -3009,7 +3050,7 @@ function saveModal() {
       c.emails = safeEmails(finalEmails);
       c.email  = c.emails;
 
-      c.linkedin=linkedin; c.manager=manager; c.brands=brands;
+      c.linkedin=linkedin; c.manager=manager; c.brands=brands; c.tags=tags;
       c.industry=industry; c.source=source; c.stage=stage;
       c.notes=notes; c.last=today;
       if (histNote) {
@@ -3025,7 +3066,7 @@ function saveModal() {
       var id = uid();
       var phonesJson = safePhones(phones);
       var emailsJson = safeEmails(emails);
-      var newC = {id:id,name:name,contact:contact,role:role,phones:phonesJson,phone:phonesJson,emails:emailsJson,email:emailsJson,linkedin:linkedin,manager:manager,brands:brands,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'};
+      var newC = {id:id,name:name,contact:contact,role:role,phones:phonesJson,phone:phonesJson,emails:emailsJson,email:emailsJson,linkedin:linkedin,manager:manager,brands:brands,tags:tags,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'};
       clients.push(newC);
       apiPost({sheet:'clients',action:'add',row:buildClientRow(newC)});
       addAct('Новий контакт: ' + esc(name), '#185FA5');
