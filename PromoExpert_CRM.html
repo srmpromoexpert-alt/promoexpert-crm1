@@ -1052,7 +1052,7 @@ function initDragDrop() {
     c.stage = newStage;
     c.last = new Date().toLocaleDateString('uk-UA');
     apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
-    initDragDrop();
+    renderPipeline();
     renderClients();
     updateStats();
     addAct(esc(c.name) + ' → ' + esc(newStage), '#185FA5');
