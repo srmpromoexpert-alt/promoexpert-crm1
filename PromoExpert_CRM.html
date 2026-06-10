@@ -154,6 +154,7 @@ tr:hover .ra{opacity:1}
 .fi:focus{border-color:var(--blue)}
 .fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mrow{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.mlabel{padding:5px 8px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:11px;font-weight:500;background:var(--bg3);color:var(--text2);outline:none;cursor:pointer;font-family:inherit;flex-shrink:0;min-width:90px}
 /* autocomplete */
 .acw{position:relative}
 .acl{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:.5px solid var(--bd2);border-radius:var(--r);z-index:300;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);display:none}
@@ -714,10 +715,25 @@ function mkAv(name) {
 
 function gv(id) { var el = document.getElementById(id); return el ? el.value : ''; }
 
+// Повертає масив об'єктів {val, label}
+// Підтримує старий формат ["050..."] і новий [{"val":"050...","label":"Мобільний"}]
 function parseList(val) {
   if (!val) return [];
-  try { var p = JSON.parse(val); return Array.isArray(p) ? p : [String(val)]; }
-  catch(e) { return String(val).split(';').map(function(v) { return v.trim(); }).filter(Boolean); }
+  var arr;
+  try {
+    var p = JSON.parse(val);
+    arr = Array.isArray(p) ? p : [String(val)];
+  } catch(e) {
+    arr = String(val).split(';').map(function(v) { return v.trim(); }).filter(Boolean);
+  }
+  return arr.map(function(item) {
+    if (item && typeof item === 'object' && item.val !== undefined) return item;
+    return { val: String(item), label: '' };
+  });
+}
+// Зворотна сумісність — просто значення без міток
+function parseListVals(val) {
+  return parseList(val).map(function(x){ return x.val; });
 }
 
 // ── EVENT DELEGATION ──
@@ -822,6 +838,8 @@ function goTo(el) {
   document.getElementById('sec-' + id).classList.add('on');
   el.classList.add('on');
   closeDrawer();
+  // Запам'ятовуємо поточний розділ
+  try { localStorage.setItem('crm_last_sec', id); } catch(e){}
   if (id === 'analytics') renderAnalytics();
   if (id === 'companies')  renderCompanies();
   if (id === 'settings')   renderSettings();
@@ -871,15 +889,32 @@ function apiPost(payload) {
   fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) }).catch(function() {});
 }
 
-// ── SAFE CLIENT ROW BUILDER ──
-// Гарантує що phones/emails завжди JSON-рядок, ніколи не втрачає дані
+// Гарантує що phones/emails завжди JSON-рядок масиву об'єктів {val, label}
 function safePhones(val) {
   if (!val) return '[]';
-  if (Array.isArray(val)) return JSON.stringify(val.filter(Boolean));
+  // Вже масив об'єктів від getMulti
+  if (Array.isArray(val)) {
+    var clean = val.filter(function(x){ return x && (x.val || x); }).map(function(x){
+      if (typeof x === 'object' && x.val !== undefined) return {val: String(x.val).trim(), label: x.label || ''};
+      return {val: String(x).trim(), label: ''};
+    }).filter(function(x){ return x.val; });
+    return JSON.stringify(clean);
+  }
   var s = String(val);
-  try { var p = JSON.parse(s); if (Array.isArray(p)) return JSON.stringify(p.filter(Boolean)); } catch(e) {}
+  // Вже валідний JSON
+  try {
+    var p = JSON.parse(s);
+    if (Array.isArray(p)) {
+      var clean = p.filter(Boolean).map(function(x){
+        if (typeof x === 'object' && x.val !== undefined) return {val: String(x.val).trim(), label: x.label || ''};
+        return {val: String(x).trim(), label: ''};
+      }).filter(function(x){ return x.val; });
+      return JSON.stringify(clean);
+    }
+  } catch(e) {}
+  // Розділений крапкою з комою рядок
   var arr = s.split(';').map(function(v){ return v.trim(); }).filter(Boolean);
-  return arr.length ? JSON.stringify(arr) : '[]';
+  return arr.length ? JSON.stringify(arr.map(function(v){ return {val:v, label:''}; })) : '[]';
 }
 function safeEmails(val) { return safePhones(val); }
 
@@ -906,17 +941,28 @@ function buildClientRow(c) {
 function syncAll() {
   ss('spin', 'Синхронізація...');
   Promise.all([apiGet('clients'), apiGet('proposals'), apiGet('tasks')]).then(function(res) {
-    // Normalize keys - trim spaces from field names
-    function normObj(obj) {
+    // Колонки clients: 0=id,1=name,2=contact,3=role,4=phones,5=emails,6=linkedin,7=industry,8=source,9=stage,10=last,11=notes,12=history,13=manager,14=brands
+    var CLIENT_COLS = ['id','name','contact','role','phones','emails','linkedin','industry','source','stage','last','notes','history','manager','brands'];
+    // Колонки proposals: 0=id,1=client,2=amount,3=projectNum,4=ver,5=deadline,6=status,7=action,8=manager,9=notes,10=files
+    var PROPOSAL_COLS = ['id','client','amount','projectNum','ver','deadline','status','action','manager','notes','files'];
+    // Колонки tasks: 0=id,1=title,2=due,3=manager,4=done,5=overdue,6=clientId,7=clientName,8=doneDate
+    var TASK_COLS = ['id','title','due','manager','done','overdue','clientId','clientName','doneDate'];
+
+    function normObj(obj, colDefs) {
       var r = {};
       for (var k in obj) { r[k.trim()] = obj[k]; }
+      // Якщо є числові ключі — це колонки без заголовків, маппимо по індексу
+      if (colDefs) {
+        for (var i = 0; i < colDefs.length; i++) {
+          if (!r[colDefs[i]] && r[String(i)] !== undefined) r[colDefs[i]] = r[String(i)];
+        }
+      }
       return r;
     }
+
     try {
       clients = res[0].map(function(raw) {
-        var c = normObj(raw);
-        // Нормалізуємо phones/emails одразу при завантаженні
-        // щоб у пам'яті завжди був коректний JSON-рядок
+        var c = normObj(raw, CLIENT_COLS);
         c.phones = safePhones(c.phones || c.phone || '');
         c.phone  = c.phones;
         c.emails = safeEmails(c.emails || c.email || '');
@@ -926,7 +972,7 @@ function syncAll() {
     } catch(e) { console.error('clients parse error', e); clients = []; }
     try {
       proposals = res[1].map(function(p) {
-        p = normObj(p);
+        p = normObj(p, PROPOSAL_COLS);
         // ver column stores projectNum
         if (!p.projectNum && p.ver) p.projectNum = p.ver;
         if (!p.projectNum) p.projectNum = 'PRJ-' + String(p.id).slice(-4);
@@ -943,18 +989,10 @@ function syncAll() {
     } catch(e) { console.error('proposals parse error', e); proposals = []; }
     try {
       tasks = res[2].map(function(t) {
-        t = normObj(t);
+        t = normObj(t, TASK_COLS);
         t.done    = (t.done    === 'TRUE' || t.done    === true || t.done    === 'true');
         t.overdue = (t.overdue === 'TRUE' || t.overdue === true || t.overdue === 'true');
-        // Fallback: if clientId/clientName missing (empty headers in Sheets),
-        // try to get them from numeric keys (7th=clientId, 8th=clientName, 0-indexed)
-        if (!t.clientId && !t.clientName) {
-          var keys = Object.keys(t);
-          // Find keys that look like column indices (empty string or number)
-          var extraKeys = keys.filter(function(k) { return k === '' || (!isNaN(Number(k)) && k !== ''); });
-          if (!t.clientId)   t.clientId   = t['clientId']   || t['6'] || t[''] || '';
-          if (!t.clientName) t.clientName = t['clientName'] || t['7'] || '';
-        }
+        t.doneDate = t.doneDate || '';
         return t;
       });
     } catch(e) { console.error('tasks parse error', e); tasks = []; }
@@ -1369,12 +1407,24 @@ function openClient(id) {
   if (c.contact) h += '<div class="fg"><div class="fl">Контакт</div><div class="fv">' + esc(c.contact) + (c.role ? ' · <span style="color:var(--text2)">' + esc(c.role) + '</span>' : '') + '</div></div>';
   if (phones.length) {
     h += '<div class="fg"><div class="fl">Телефон' + (phones.length > 1 ? 'и' : '') + '</div><div class="fv">';
-    for (var i = 0; i < phones.length; i++) h += '<a href="tel:' + esc(phones[i]) + '" style="color:var(--text);display:block;text-decoration:none">' + esc(phones[i]) + '</a>';
+    for (var i = 0; i < phones.length; i++) {
+      var ph = phones[i];
+      h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+      if (ph.label) h += '<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg3);color:var(--text2);border:.5px solid var(--bd2);flex-shrink:0">' + esc(ph.label) + '</span>';
+      h += '<a href="tel:' + esc(ph.val) + '" style="color:var(--text);text-decoration:none">' + esc(ph.val) + '</a>';
+      h += '</div>';
+    }
     h += '</div></div>';
   }
   if (emails.length) {
     h += '<div class="fg"><div class="fl">Email' + (emails.length > 1 ? 'и' : '') + '</div><div class="fv">';
-    for (var i = 0; i < emails.length; i++) h += '<a href="mailto:' + esc(emails[i]) + '" style="color:var(--blue);display:block;text-decoration:none">' + esc(emails[i]) + '</a>';
+    for (var i = 0; i < emails.length; i++) {
+      var em = emails[i];
+      h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+      if (em.label) h += '<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg3);color:var(--text2);border:.5px solid var(--bd2);flex-shrink:0">' + esc(em.label) + '</span>';
+      h += '<a href="mailto:' + esc(em.val) + '" style="color:var(--blue);text-decoration:none">' + esc(em.val) + '</a>';
+      h += '</div>';
+    }
     h += '</div></div>';
   }
   if (c.linkedin) {
@@ -1705,8 +1755,8 @@ function renderCompanies() {
       var ctbt = indBgTxt(ct.industry);
       h += '<div class="av" style="width:22px;height:22px;font-size:9px;background:' + ctbt.bg + ';color:' + ctbt.txt + '">' + String(cname).slice(0,2).toUpperCase() + '</div>';
       h += '<div style="flex:1"><div style="font-weight:500">' + esc(cname) + '</div><div style="font-size:11px;color:var(--text2)">' + esc(ct.role || '') + '</div></div>';
-      if (phones.length) h += '<a href="tel:' + esc(phones[0]) + '" title="' + esc(phones[0]) + '" style="color:var(--text2)"><i class="ti ti-phone" style="font-size:13px"></i></a>';
-      if (emails.length) h += '<a href="mailto:' + esc(emails[0]) + '" title="' + esc(emails[0]) + '" style="color:var(--text2);margin-left:4px"><i class="ti ti-mail" style="font-size:13px"></i></a>';
+      if (phones.length) h += '<a href="tel:' + esc(phones[0].val) + '" title="' + esc((phones[0].label ? phones[0].label + ': ' : '') + phones[0].val) + '" style="color:var(--text2)"><i class="ti ti-phone" style="font-size:13px"></i></a>';
+      if (emails.length) h += '<a href="mailto:' + esc(emails[0].val) + '" title="' + esc((emails[0].label ? emails[0].label + ': ' : '') + emails[0].val) + '" style="color:var(--text2);margin-left:4px"><i class="ti ti-mail" style="font-size:13px"></i></a>';
       h += '<button class="ib" style="width:22px;height:22px;font-size:12px;margin-left:6px" data-action="open-client" data-id="' + esc(ct.id) + '"><i class="ti ti-eye"></i></button>';
       h += '</div>';
     }
@@ -2561,8 +2611,7 @@ function acHide() { var l = document.getElementById('aclist'); if (l) l.style.di
 // ── MULTI PHONES/EMAILS ──
 function addPhone() {
   var w = document.getElementById('phoneswrap');
-  if (!w) { console.warn('phoneswrap not found'); return; }
-  // Add delete button to first row if missing
+  if (!w) return;
   var first = w.querySelector('.mrow');
   if (first && !first.querySelector('[data-action="del-mrow"]')) {
     var btn = document.createElement('button');
@@ -2572,14 +2621,15 @@ function addPhone() {
     first.appendChild(btn);
   }
   var d = document.createElement('div'); d.className = 'mrow';
-  d.innerHTML = '<input class="fi mphone" placeholder="+38 050..." style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+  d.innerHTML = mkLabelSel('mphone-label', 'Мобільний', PHONE_LABELS) +
+    '<input class="fi mphone" placeholder="+38 050..." style="flex:1">' +
+    '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
   w.appendChild(d); d.querySelector('input').focus();
 }
 
 function addEmail() {
   var w = document.getElementById('emailswrap');
-  if (!w) { console.warn('emailswrap not found'); return; }
-  // Add delete button to first row if missing
+  if (!w) return;
   var first = w.querySelector('.mrow');
   if (first && !first.querySelector('[data-action="del-mrow"]')) {
     var btn = document.createElement('button');
@@ -2589,36 +2639,59 @@ function addEmail() {
     first.appendChild(btn);
   }
   var d = document.createElement('div'); d.className = 'mrow';
-  d.innerHTML = '<input class="fi memail" placeholder="email@company.ua" style="flex:1"><button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
+  d.innerHTML = mkLabelSel('memail-label', 'Робочий', EMAIL_LABELS) +
+    '<input class="fi memail" placeholder="email@company.ua" style="flex:1">' +
+    '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
   w.appendChild(d); d.querySelector('input').focus();
 }
 
 function getMulti(cls) {
-  // Шукаємо ТІЛЬКИ всередині модального вікна, щоб не зібрати поля з інших частин сторінки
   var container = document.getElementById('mbody') || document;
   var vals = [], els = container.querySelectorAll('.' + cls);
-  for (var i = 0; i < els.length; i++) { var v = els[i].value.trim(); if (v) vals.push(v); }
+  for (var i = 0; i < els.length; i++) {
+    var v = els[i].value.trim();
+    if (!v) continue;
+    var row = els[i].closest('.mrow');
+    // клас мітки: mphone → mphone-label, memail → memail-label
+    var labelEl = row ? row.querySelector('.' + cls + '-label') : null;
+    var label = labelEl ? labelEl.value : '';
+    vals.push({ val: v, label: label });
+  }
   return vals;
 }
 
 // ── BUILD CLIENT FORM ──
+var PHONE_LABELS = ['Мобільний','Робочий','Особистий','Telegram','Viber','WhatsApp','Інше'];
+var EMAIL_LABELS = ['Робочий','Особистий','Інше'];
+
+function mkLabelSel(cls, selected, opts) {
+  var h = '<select class="mlabel ' + cls + '">';
+  for (var i = 0; i < opts.length; i++) {
+    h += '<option value="' + esc(opts[i]) + '"' + (opts[i] === selected ? ' selected' : '') + '>' + esc(opts[i]) + '</option>';
+  }
+  h += '</select>';
+  return h;
+}
+
 function buildClientForm(c) {
   c = c || {};
   var phones = parseList(c.phones || c.phone || '');
   var emails = parseList(c.emails || c.email || '');
-  if (!phones.length) phones = [''];
-  if (!emails.length) emails = [''];
+  if (!phones.length) phones = [{ val: '', label: 'Мобільний' }];
+  if (!emails.length) emails = [{ val: '', label: 'Робочий' }];
   var ph = '';
   for (var i = 0; i < phones.length; i++) {
     ph += '<div class="mrow">';
-    ph += '<input class="fi mphone" value="' + esc(phones[i]) + '" placeholder="+38 050..." style="flex:1">';
+    ph += mkLabelSel('mphone-label', phones[i].label || 'Мобільний', PHONE_LABELS);
+    ph += '<input class="fi mphone" value="' + esc(phones[i].val || '') + '" placeholder="+38 050..." style="flex:1">';
     if (i > 0) ph += '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
     ph += '</div>';
   }
   var em = '';
   for (var i = 0; i < emails.length; i++) {
     em += '<div class="mrow">';
-    em += '<input class="fi memail" value="' + esc(emails[i]) + '" placeholder="email@company.ua" style="flex:1">';
+    em += mkLabelSel('memail-label', emails[i].label || 'Робочий', EMAIL_LABELS);
+    em += '<input class="fi memail" value="' + esc(emails[i].val || '') + '" placeholder="email@company.ua" style="flex:1">';
     if (i > 0) em += '<button type="button" class="ib d" style="flex-shrink:0" data-action="del-mrow"><i class="ti ti-x"></i></button>';
     em += '</div>';
   }
@@ -2910,8 +2983,8 @@ function saveModal() {
   if (curModal === 'client' || curModal === 'client_edit') {
     var name = (document.getElementById('fname') || {value:''}).value.trim();
     if (!name) { alert('Введіть назву компанії'); return; }
-    var phones = JSON.stringify(getMulti('mphone'));
-    var emails  = JSON.stringify(getMulti('memail'));
+    var phones = getMulti('mphone');
+    var emails  = getMulti('memail');
     var contact = gv('fcontact'), role = gv('frole'), linkedin = gv('fli');
     var industry = gv('find') || 'Інше', source = gv('fsrc') || 'Інше';
     var stage = gv('fstage') || 'Новий лід', manager = gv('fmgr');
@@ -2922,28 +2995,19 @@ function saveModal() {
       if (!c) return;
       c.name=name; c.contact=contact; c.role=role;
 
-      // ЗАХИСТ: зчитуємо поля з форми
-      var newPhones = getMulti('mphone');
-      var newEmails = getMulti('memail');
-      // Якщо форма повернула порожній масив але в об'єкті були дані — зберігаємо старі
-      // (захист від випадку коли форма не завантажила поля правильно)
+      // phones/emails вже зчитані вище як масиви об'єктів {val, label}
       var oldPhones = parseList(c.phones || c.phone || '');
       var oldEmails = parseList(c.emails || c.email || '');
-      var finalPhones = newPhones.length > 0 ? newPhones : oldPhones;
-      var finalEmails = newEmails.length > 0 ? newEmails : oldEmails;
+      // Захист: якщо форма повернула порожній масив — зберігаємо старі дані
+      var finalPhones = phones.length > 0 ? phones : oldPhones;
+      var finalEmails = emails.length > 0 ? emails : oldEmails;
+      if (phones.length === 0 && oldPhones.length > 0) console.warn('[CRM] phones порожні у формі, зберігаємо старі:', oldPhones);
+      if (emails.length === 0 && oldEmails.length > 0) console.warn('[CRM] emails порожні у формі, зберігаємо старі:', oldEmails);
 
       c.phones = safePhones(finalPhones);
       c.phone  = c.phones;
       c.emails = safeEmails(finalEmails);
       c.email  = c.emails;
-
-      // Показуємо попередження якщо phones/emails стали порожніми (fallback на старі)
-      if (newPhones.length === 0 && oldPhones.length > 0) {
-        console.warn('[CRM] phones були порожні у формі, зберігаємо старі:', oldPhones);
-      }
-      if (newEmails.length === 0 && oldEmails.length > 0) {
-        console.warn('[CRM] emails були порожні у формі, зберігаємо старі:', oldEmails);
-      }
 
       c.linkedin=linkedin; c.manager=manager; c.brands=brands;
       c.industry=industry; c.source=source; c.stage=stage;
@@ -2954,17 +3018,49 @@ function saveModal() {
         c.history = JSON.stringify(hist);
       }
       apiPost({sheet:'clients',action:'update',id:c.id,row:buildClientRow(c)});
-      renderAll(); addAct('Оновлено: ' + esc(name), '#185FA5');
+      filterClients(); renderCompanies(); updateStats();
+      addAct('Оновлено: ' + esc(name), '#185FA5');
       closeModal(); openClient(curEditId);
     } else {
       var id = uid();
-      var phonesJson = safePhones(getMulti('mphone'));
-      var emailsJson = safeEmails(getMulti('memail'));
+      var phonesJson = safePhones(phones);
+      var emailsJson = safeEmails(emails);
       var newC = {id:id,name:name,contact:contact,role:role,phones:phonesJson,phone:phonesJson,emails:emailsJson,email:emailsJson,linkedin:linkedin,manager:manager,brands:brands,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'};
       clients.push(newC);
       apiPost({sheet:'clients',action:'add',row:buildClientRow(newC)});
-      renderAll(); addAct('Новий контакт: ' + esc(name), '#185FA5');
+      addAct('Новий контакт: ' + esc(name), '#185FA5');
       closeModal();
+      // Оновлюємо всі списки
+      filterClients();
+      renderCompanies();
+      updateStats();
+      // Якщо були у розділі компаній — залишаємось там і прокручуємо до потрібної компанії
+      var compSec = document.getElementById('sec-companies');
+      if (compSec && compSec.classList.contains('on')) {
+        // Знаходимо картку компанії і підсвічуємо її
+        setTimeout(function() {
+          var grid = document.getElementById('compgrid');
+          if (!grid) return;
+          var cards = grid.querySelectorAll('.cc');
+          for (var ci = 0; ci < cards.length; ci++) {
+            var titleEl = cards[ci].querySelector('.cch div div');
+            if (titleEl && titleEl.textContent === name) {
+              cards[ci].scrollIntoView({behavior:'smooth', block:'center'});
+              cards[ci].style.outline = '2px solid var(--blue)';
+              cards[ci].style.outlineOffset = '2px';
+              setTimeout(function(card){ card.style.outline = ''; card.style.outlineOffset = ''; }, 2000, cards[ci]);
+              break;
+            }
+          }
+        }, 50);
+      } else {
+        // Були деінде — переходимо на компанії щоб показати результат
+        goToSec('companies');
+        setTimeout(function() {
+          var srch = document.getElementById('compsrch');
+          if (srch) { srch.value = name; renderCompanies(); }
+        }, 80);
+      }
     }
   } else if (curModal === 'task_edit') {
     var t = tasks.find(function(x) { return String(x.id) === String(curEditId); });
@@ -2984,7 +3080,7 @@ function saveModal() {
       t.clientId = '';
       t.clientName = '';
     }
-    apiPost({sheet:'tasks', action:'update', id:t.id, row:[t.id,t.title,t.due,t.manager,t.done,t.overdue,t.clientId||'',t.clientName||'']});
+    apiPost({sheet:'tasks', action:'update', id:t.id, row:[t.id,t.title,t.due,t.manager,t.done,t.overdue,t.clientId||'',t.clientName||'',t.doneDate||'']});
     renderTasks(); updateStats(); renderDashTasks(); addAct('Оновлено завдання: ' + esc(title), '#185FA5');
     closeModal();
   } else if (curModal === 'task') {
@@ -2996,8 +3092,8 @@ function saveModal() {
     var clientId = gv('fclientlink'), clientName = '';
     if (clientId) { var cl = clients.find(function(x) { return x.id === clientId; }); if (cl) clientName = cl.name; }
     var id = uid();
-    tasks.push({id:id,title:title,due:due,manager:mgr,done:false,overdue:false,clientId:clientId,clientName:clientName});
-    apiPost({sheet:'tasks',action:'add',row:[id,title,due,mgr,false,false,clientId,clientName]});
+    tasks.push({id:id,title:title,due:due,manager:mgr,done:false,overdue:false,clientId:clientId,clientName:clientName,doneDate:''});
+    apiPost({sheet:'tasks',action:'add',row:[id,title,due,mgr,false,false,clientId,clientName,'']});
     renderTasks(); updateStats(); renderDashTasks(); addAct('Завдання: ' + esc(title) + (clientName ? ' → ' + esc(clientName) : ''), '#185FA5');
     closeModal();
   } else if (curModal === 'proposal' || curModal === 'proposal_edit') {
@@ -3086,6 +3182,15 @@ document.getElementById('ddate').textContent = days[now.getDay()] + ', ' + now.t
 renderAll();
 ss('spin', 'Підключення...');
 syncAll();
+
+// Відновлюємо останній розділ після перезавантаження
+try {
+  var lastSec = localStorage.getItem('crm_last_sec');
+  if (lastSec && lastSec !== 'dashboard') {
+    var lastBtn = document.querySelector('[data-sec="' + lastSec + '"]');
+    if (lastBtn) goTo(lastBtn);
+  }
+} catch(e) {}
 </script>
 </body>
 </html>
