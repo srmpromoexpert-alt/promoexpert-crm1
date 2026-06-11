@@ -207,6 +207,7 @@ tr:hover .ra{opacity:1}
       <button class="nb" data-sec="pipeline" onclick="goTo(this)"><i class="ti ti-git-branch"></i> Воронка</button>
       <button class="nb" data-sec="proposals" onclick="goTo(this)"><i class="ti ti-briefcase"></i> Проекти <span class="nbadge" id="kpb">0</span></button>
       <button class="nb" data-sec="tasks" onclick="goTo(this)"><i class="ti ti-checkbox"></i> Завдання <span class="nbadge" id="tkb">0</span></button>
+      <button class="nb" data-sec="coldbase" onclick="goTo(this)"><i class="ti ti-snowflake"></i> Холодна база <span class="nbadge" id="cbb">0</span></button>
       <button class="nb" data-sec="report" onclick="goTo(this)"><i class="ti ti-file-text"></i> Звіт</button>
       <button class="nb" data-sec="analytics" onclick="goTo(this)"><i class="ti ti-chart-bar"></i> Аналітика</button>
       <button class="nb" data-sec="settings" onclick="goTo(this)"><i class="ti ti-settings"></i> Налаштування</button>
@@ -514,6 +515,24 @@ tr:hover .ra{opacity:1}
       </div>
     </div>
 
+    <!-- ХОЛОДНА БАЗА -->
+    <div id="sec-coldbase" class="sec">
+      <div class="topbar">
+        <span class="ttl">🧊 Холодна база</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="srch" id="cbsrch" placeholder="Пошук..." oninput="filterColdBase()" style="width:180px">
+        </div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <table>
+            <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Хто передав</th><th>Остання дія</th><th></th></tr></thead>
+            <tbody id="cbtbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ANALYTICS -->
     <div id="sec-analytics" class="sec">
       <div class="topbar"><span class="ttl">Аналітика</span></div>
@@ -608,7 +627,7 @@ tr:hover .ra{opacity:1}
 </div>
 
 <script>
-var API = 'https://script.google.com/macros/s/AKfycbzxNaEa8GpHccPeXxX84dscy2kNvb3QhuYuLj5F3pYlx1vEYrJxd0Z71V-jGxC5nsks/exec';
+var API = 'https://script.google.com/macros/s/AKfycbzfxIg6zKeZI2gIG4JwvHpRgUFjmS1D-w6J-ZhJHUmrDIBWmOTNj2VYzvpiCDV1LVNU/exec';
 var clients = [], proposals = [], tasks = [], acts = [];
 var curModal = '', curEditId = null, cfmCb = null;
 
@@ -717,9 +736,13 @@ function showLoginScreen() {
 }
 
 // Фільтрує клієнтів по менеджеру
+// Холодна база — окремий розділ, не показується в Контактах і Воронці
 function clientsForCurrentMgr(list) {
-  if (isAdmin) return list;
+  if (isAdmin) {
+    return (list || clients).filter(function(c) { return c.stage !== COLD_STAGE; });
+  }
   return (list || clients).filter(function(c) {
+    if (c.stage === COLD_STAGE) return false; // холодна база — окремо
     return !c.manager || c.manager === currentManager || c.manager === 'Не призначено';
   });
 }
@@ -754,8 +777,40 @@ var DEFS = {
 var LISTS;
 try { LISTS = JSON.parse(localStorage.getItem('crm_lists') || 'null') || JSON.parse(JSON.stringify(DEFS)); }
 catch(e) { LISTS = JSON.parse(JSON.stringify(DEFS)); }
-function gl(k) { return LISTS[k] || DEFS[k] || []; }
-function saveLists() { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); }
+function gl(k) { return (LISTS && LISTS[k]) || DEFS[k] || []; }
+
+// Зберігає налаштування в Google Sheets (аркуш "settings") + локально як кеш
+function saveLists() {
+  try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
+  // Зберігаємо в Sheets — один рядок: key=value
+  var rows = [];
+  for (var k in LISTS) {
+    rows.push([k, JSON.stringify(LISTS[k])]);
+  }
+  apiPost({sheet:'settings', action:'set_all', rows: rows});
+}
+
+// Завантажує налаштування з Google Sheets
+function loadSettings(cb) {
+  apiGet('settings').then(function(data) {
+    if (data && data.length) {
+      var loaded = {};
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        var k = row.key || row['0'] || row[Object.keys(row)[0]];
+        var v = row.value || row['1'] || row[Object.keys(row)[1]];
+        if (k && v) {
+          try { loaded[k] = JSON.parse(v); } catch(e) { loaded[k] = v; }
+        }
+      }
+      if (Object.keys(loaded).length) {
+        LISTS = loaded;
+        try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
+      }
+    }
+    if (cb) cb();
+  }).catch(function() { if (cb) cb(); });
+}
 
 // ── USER COLORS ──
 var COLOR_CATS = ['INDUSTRIES','STAGES','PROP_STATUSES','pipeStages'];
@@ -997,6 +1052,7 @@ function goTo(el) {
   if (id === 'clients')    { populateFilters(); filterClients(); }
   if (id === 'report')     { generateReport(); }
   if (id === 'tasks')      { renderTasks(); }
+  if (id === 'coldbase')   { renderColdBase(); }
 }
 function goToSec(sec) {
   var el = document.querySelector('[data-sec="' + sec + '"]');
@@ -1038,6 +1094,12 @@ function apiGet(sheet) {
 
 function apiPost(payload) {
   fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) }).catch(function() {});
+}
+
+// Оновлює тільки конкретні поля — не перезаписує весь рядок
+// fields = {manager: 'Герман', stage: 'Погодження'}
+function apiPatch(sheet, id, fields) {
+  apiPost({sheet: sheet, action: 'patch', id: id, fields: fields});
 }
 
 // Гарантує що phones/emails завжди JSON-рядок масиву об'єктів {val, label}
@@ -1201,7 +1263,8 @@ function initDragDrop() {
     if (!c || c.stage === newStage) return;
     c.stage = newStage;
     c.last = new Date().toLocaleDateString('uk-UA');
-    apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+    // patch — оновлює тільки stage і last, не чіпає інші поля
+    apiPatch('clients', c.id, {stage: newStage, last: c.last});
     renderPipeline();
     renderClients();
     updateStats();
@@ -1385,6 +1448,7 @@ function renderAll() {
   renderActivity();
   renderRecentClients();
   renderDashKP();
+  renderColdBase();
   updateStats();
   populateFilters();
   restoreFilterState();
@@ -1454,8 +1518,11 @@ function renderClients(list) {
     var st = stageColor(c.stage);
     var cbt = indBgTxt(c.industry);
     // data-action на самому <tr> — клік по будь-якому місцю рядка відкриває картку
-    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer">';
-    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
+    var isCold = (c.stage === 'Холодна база');
+    var isMine = isAdmin || !c.manager || c.manager === currentManager;
+    var rowStyle = isCold && !isMine ? 'cursor:pointer;opacity:0.7' : 'cursor:pointer';
+    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="' + rowStyle + '">';
+    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><div><span style="font-weight:500">' + esc(c.name) + '</span>' + (isCold && !isMine ? '<div style="font-size:10px;color:var(--text2)">🧊 Холодна база</div>' : '') + '</div></div></td>';
     h += '<td><div>' + esc(c.contact || '') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
     h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
     var cTags = (c.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
@@ -1465,7 +1532,6 @@ function renderClients(list) {
     h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
     h += '<td onclick="event.stopPropagation()"><div class="ra">';
     h += '<button class="ib" data-action="open-client" data-id="' + esc(c.id) + '"><i class="ti ti-eye"></i></button>';
-    h += '<button class="ib d" data-action="del-client" data-id="' + esc(c.id) + '"><i class="ti ti-trash"></i></button>';
     h += '</div></td>';
     h += '</tr>';
   }
@@ -1697,9 +1763,15 @@ function openClient(id) {
 
   h += '</div>';
 
-  // Duplicate
-  h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:flex-end">';
+  // Duplicate + Cold Base
+  h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:space-between;align-items:center">';
   h += '<button class="btn s" data-action="dup-client" data-id="' + esc(id) + '" style="font-size:11px"><i class="ti ti-copy"></i> Дублювати картку</button>';
+  var isColdNow = (c.stage === 'Холодна база');
+  if (isColdNow) {
+    h += '<button class="btn s" onclick="restoreFromCold(\'' + esc(id) + '\')" style="font-size:11px;color:var(--blue)"><i class="ti ti-arrow-back-up"></i> Повернути з бази</button>';
+  } else {
+    h += '<button class="btn s" onclick="sendToCold(\'' + esc(id) + '\')" style="font-size:11px;color:var(--text2)"><i class="ti ti-snowflake"></i> В холодну базу</button>';
+  }
   h += '</div>';
   h += '</div>';
   document.getElementById('drbody').innerHTML = h;
@@ -1717,18 +1789,89 @@ function openClient(id) {
   }
 }
 
+// ── ХОЛОДНА БАЗА ──
+var COLD_STAGE = 'Холодна база';
+
+function sendToCold(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  if (!confirm('Перенести "' + c.name + '" в холодну базу?\nКлієнт буде видимий обом менеджерам.')) return;
+  c._prevStage = c.stage; // зберігаємо попередній етап
+  c.stage = COLD_STAGE;
+  c.last = new Date().toLocaleDateString('uk-UA');
+  apiPatch('clients', c.id, {stage: COLD_STAGE, last: c.last, _prevStage: c._prevStage || ''});
+  closeDrawer();
+  renderAll();
+  addAct('🧊 ' + esc(c.name) + ' → Холодна база', '#888');
+}
+
+function restoreFromCold(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  var prevStage = c._prevStage || 'Новий лід';
+  if (!confirm('Повернути "' + c.name + '" з холодної бази?\nЕтап буде: ' + prevStage)) return;
+  c.stage = prevStage;
+  c._prevStage = '';
+  c.last = new Date().toLocaleDateString('uk-UA');
+  apiPatch('clients', c.id, {stage: prevStage, last: c.last, _prevStage: ''});
+  closeDrawer();
+  renderAll();
+  addAct('↩️ ' + esc(c.name) + ' повернуто з холодної бази', '#185FA5');
+}
+
+function getColdClients() {
+  return clients.filter(function(c) { return c.stage === COLD_STAGE; });
+}
+
+function renderColdBase(list) {
+  var data = list || getColdClients();
+  var tbody = document.getElementById('cbtbody');
+  if (!tbody) return;
+  // Оновлюємо бейдж
+  var badge = document.getElementById('cbb');
+  if (badge) badge.textContent = getColdClients().length;
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2)">Холодна база порожня</td></tr>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < data.length; i++) {
+    var c = data[i];
+    var cbt = indBgTxt(c.industry);
+    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer">';
+    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
+    h += '<td><div>' + esc(c.contact || '—') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
+    h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + esc(c.manager || '—') + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
+    h += '<td onclick="event.stopPropagation()"><button class="btn s" onclick="restoreFromCold(\'' + esc(c.id) + '\')" style="font-size:11px"><i class="ti ti-arrow-back-up"></i> Повернути</button></td>';
+    h += '</tr>';
+  }
+  tbody.innerHTML = h;
+}
+
+function filterColdBase() {
+  var q = (document.getElementById('cbsrch') || {value:''}).value.toLowerCase();
+  var list = getColdClients().filter(function(c) {
+    return (c.name||'').toLowerCase().indexOf(q) >= 0 ||
+           (c.contact||'').toLowerCase().indexOf(q) >= 0 ||
+           (c.industry||'').toLowerCase().indexOf(q) >= 0;
+  });
+  renderColdBase(list);
+}
+
 function quickChangeStage(id, newStage) {
   if (!newStage) return;
   var c = clients.find(function(x) { return String(x.id) === String(id); });
   if (!c || c.stage === newStage) return;
   c.stage = newStage;
   c.last = new Date().toLocaleDateString('uk-UA');
-  apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+  // patch — тільки stage і last, не чіпаємо history та інші поля
+  apiPatch('clients', c.id, {stage: newStage, last: c.last});
   renderPipeline();
   renderClients();
   updateStats();
   addAct(esc(c.name) + ' → ' + esc(newStage), '#185FA5');
-  // refresh drawer
   openClient(id);
 }
 
@@ -1738,7 +1881,6 @@ function saveQuickHist(id) {
   var inp = document.getElementById('qhi');
   if (!inp || !inp.value.trim()) return;
   var typeSel = document.getElementById('qhi-type');
-  var emojiMap = {};
   var typeVal = typeSel ? typeSel.value : '';
   var prefix = typeVal ? typeVal + ': ' : '';
   var text = prefix + inp.value.trim();
@@ -1748,7 +1890,8 @@ function saveQuickHist(id) {
   hist.unshift({text: text, date: today});
   c.history = JSON.stringify(hist);
   c.last = today;
-  apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+  // patch — тільки history і last
+  apiPatch('clients', c.id, {history: c.history, last: today});
   openClient(id);
 }
 
@@ -2288,6 +2431,8 @@ function updateBadges() {
   var myProps = proposalsForCurrentMgr(proposals);
   document.getElementById('tkb').textContent = myTasks.filter(function(t) { return !t.done; }).length;
   document.getElementById('kpb').textContent = myProps.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var cbb = document.getElementById('cbb');
+  if (cbb) cbb.textContent = getColdClients().length || '';
 }
 
 // ── ACTIVITY ──
@@ -3259,6 +3404,32 @@ function saveModal() {
       addAct('Оновлено: ' + esc(name), '#185FA5');
       closeModal(); openClient(curEditId);
     } else {
+      // Перевірка на дублі — тільки по імені контакту або телефону
+      var duplicates = [];
+      if (contact || phones.length) {
+        duplicates = clients.filter(function(x) {
+          // Збіг по імені контакту
+          if (contact && x.contact && x.contact.toLowerCase() === contact.toLowerCase()) return true;
+          // Збіг по телефону
+          if (phones.length) {
+            var xPhones = parseListVals(x.phones || x.phone || '');
+            for (var pi = 0; pi < phones.length; pi++) {
+              var ph = typeof phones[pi] === 'object' ? phones[pi].val : phones[pi];
+              ph = String(ph).replace(/\D/g,'');
+              if (!ph) continue;
+              for (var xi = 0; xi < xPhones.length; xi++) {
+                if (String(xPhones[xi]).replace(/\D/g,'') === ph) return true;
+              }
+            }
+          }
+          return false;
+        });
+      }
+      if (duplicates.length > 0) {
+        var dupNames = duplicates.map(function(x){ return '"' + (x.contact || x.name) + (x.name ? ' (' + x.name + ')' : '') + '"'; }).join(', ');
+        var proceed = confirm('⚠️ Можливий дубль!\n\nВже є контакт: ' + dupNames + '\n\nВсе одно створити новий?');
+        if (!proceed) return;
+      }
       var id = uid();
       var phonesJson = safePhones(phones);
       var emailsJson = safeEmails(emails);
@@ -3418,7 +3589,17 @@ document.getElementById('ddate').textContent = days[now.getDay()] + ', ' + now.t
 
 renderAll();
 ss('spin', 'Підключення...');
-syncAll();
+
+// Завантажуємо налаштування з Sheets, потім дані
+loadSettings(function() {
+  renderAll(); // перерендерити з актуальними налаштуваннями
+  syncAll();
+});
+
+// Автосинхронізація кожні 2 хвилини
+setInterval(function() {
+  syncAll();
+}, 2 * 60 * 1000);
 
 // ── MANAGER INIT ──
 // Перевіряємо збережений менеджер або показуємо екран вибору
