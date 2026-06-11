@@ -1859,6 +1859,8 @@ function filterColdBase() {
   });
   renderColdBase(list);
 }
+
+function quickChangeStage(id, newStage) {
   if (!newStage) return;
   var c = clients.find(function(x) { return String(x.id) === String(id); });
   if (!c || c.stage === newStage) return;
