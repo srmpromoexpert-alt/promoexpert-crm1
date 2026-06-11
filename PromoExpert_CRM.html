@@ -207,10 +207,22 @@ tr:hover .ra{opacity:1}
       <button class="nb" data-sec="pipeline" onclick="goTo(this)"><i class="ti ti-git-branch"></i> Воронка</button>
       <button class="nb" data-sec="proposals" onclick="goTo(this)"><i class="ti ti-briefcase"></i> Проекти <span class="nbadge" id="kpb">0</span></button>
       <button class="nb" data-sec="tasks" onclick="goTo(this)"><i class="ti ti-checkbox"></i> Завдання <span class="nbadge" id="tkb">0</span></button>
+      <button class="nb" data-sec="coldbase" onclick="goTo(this)"><i class="ti ti-snowflake"></i> Холодна база <span class="nbadge" id="cbb">0</span></button>
       <button class="nb" data-sec="report" onclick="goTo(this)"><i class="ti ti-file-text"></i> Звіт</button>
       <button class="nb" data-sec="analytics" onclick="goTo(this)"><i class="ti ti-chart-bar"></i> Аналітика</button>
       <button class="nb" data-sec="settings" onclick="goTo(this)"><i class="ti ti-settings"></i> Налаштування</button>
     </nav>
+    <!-- MANAGER BADGE -->
+    <div style="padding:8px 10px;border-top:.5px solid var(--bd);background:var(--bg3)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0" id="mgr-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="mgr-badge">—</div>
+          <div style="font-size:10px;color:var(--text2)" id="mgr-role">—</div>
+        </div>
+      </div>
+      <button onclick="switchManager()" style="width:100%;padding:5px 8px;border:.5px solid var(--bd2);border-radius:6px;background:var(--bg2);color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-switch-horizontal"></i> Змінити менеджера</button>
+    </div>
     <div class="syncbar">
       <div class="sdot" id="sdot"></div>
       <span id="stxt">Підключення...</span>
@@ -503,6 +515,24 @@ tr:hover .ra{opacity:1}
       </div>
     </div>
 
+    <!-- ХОЛОДНА БАЗА -->
+    <div id="sec-coldbase" class="sec">
+      <div class="topbar">
+        <span class="ttl">🧊 Холодна база</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="srch" id="cbsrch" placeholder="Пошук..." oninput="filterColdBase()" style="width:180px">
+        </div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <table>
+            <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Хто передав</th><th>Остання дія</th><th></th></tr></thead>
+            <tbody id="cbtbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ANALYTICS -->
     <div id="sec-analytics" class="sec">
       <div class="topbar"><span class="ttl">Аналітика</span></div>
@@ -573,6 +603,17 @@ tr:hover .ra{opacity:1}
   </div>
 </div>
 
+<!-- MANAGER LOGIN SCREEN -->
+<div id="mgr-login" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:16px;padding:32px 36px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.1)">
+    <div style="margin-bottom:24px">
+      <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">PromoExpert CRM</h2>
+      <p style="font-size:12px;color:var(--text2)">Оберіть свій профіль для входу</p>
+    </div>
+    <div id="mgr-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="ovl" id="covl">
   <div class="cfm">
@@ -586,9 +627,141 @@ tr:hover .ra{opacity:1}
 </div>
 
 <script>
-var API = 'https://script.google.com/macros/s/AKfycbzxNaEa8GpHccPeXxX84dscy2kNvb3QhuYuLj5F3pYlx1vEYrJxd0Z71V-jGxC5nsks/exec';
+var API = 'https://script.google.com/macros/s/AKfycbzfxIg6zKeZI2gIG4JwvHpRgUFjmS1D-w6J-ZhJHUmrDIBWmOTNj2VYzvpiCDV1LVNU/exec';
 var clients = [], proposals = [], tasks = [], acts = [];
 var curModal = '', curEditId = null, cfmCb = null;
+
+// ── MANAGER / ROLE SYSTEM ──
+// Перший менеджер в списку MANAGERS вважається адміном
+// currentManager — ім'я поточного менеджера (з localStorage)
+var currentManager = null;
+var isAdmin = false;
+
+function getAdminName() {
+  return DEFS.MANAGERS[0]; // завжди з DEFS, не з localStorage
+}
+
+// ── PIN для адміна ──
+var ADMIN_PIN = (function(){ try { return localStorage.getItem('crm_admin_pin') || '1234'; } catch(e){ return '1234'; } })(); // змініть через Налаштування
+var _pendingAdminLogin = false;
+
+function loginAs(name) {
+  var adminName = getAdminName();
+  if (name === adminName) {
+    // Запитуємо PIN
+    _pendingAdminLogin = true;
+    showPinScreen();
+    return;
+  }
+  _doLogin(name);
+}
+
+function _doLogin(name) {
+  currentManager = name;
+  isAdmin = (name === getAdminName());
+  try { localStorage.setItem('crm_manager', name); } catch(e) {}
+  document.getElementById('mgr-login').style.display = 'none';
+  applyManagerUI();
+  var badge = document.getElementById('mgr-badge');
+  if (badge) badge.textContent = name;
+  var adminBadge = document.getElementById('mgr-role');
+  if (adminBadge) adminBadge.textContent = isAdmin ? '👑 Адмін' : 'Менеджер';
+  var avatar = document.getElementById('mgr-avatar');
+  if (avatar) {
+    avatar.textContent = String(name).slice(0,2).toUpperCase();
+    avatar.style.background = isAdmin ? 'var(--blue)' : '#6b6b67';
+  }
+  renderAll();
+}
+
+function showPinScreen() {
+  var adminName = getAdminName();
+  document.getElementById('mgr-list').innerHTML =
+    '<div style="text-align:center;margin-bottom:16px">' +
+      '<div style="width:48px;height:48px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 8px">' + String(adminName).slice(0,2).toUpperCase() + '</div>' +
+      '<div style="font-size:14px;font-weight:600">' + esc(adminName) + '</div>' +
+      '<div style="font-size:11px;color:var(--text2);margin-top:2px">👑 Адмін · введіть PIN</div>' +
+    '</div>' +
+    '<input id="pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="• • • •" style="width:100%;padding:12px;text-align:center;font-size:20px;letter-spacing:8px;border:.5px solid var(--bd2);border-radius:10px;background:var(--bg3);color:var(--text);outline:none;font-family:inherit;margin-bottom:8px" onkeydown="if(event.key===\'Enter\')checkPin()">' +
+    '<div id="pin-err" style="color:var(--red);font-size:12px;text-align:center;height:18px;margin-bottom:8px"></div>' +
+    '<button onclick="checkPin()" style="width:100%;padding:11px;border-radius:10px;background:var(--blue);color:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Увійти</button>' +
+    '<button onclick="showLoginScreen()" style="width:100%;padding:8px;border-radius:10px;background:none;color:var(--text2);border:none;font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px">← Назад</button>';
+  document.getElementById('mgr-login').style.display = 'flex';
+  setTimeout(function(){ var p = document.getElementById('pin-input'); if(p) p.focus(); }, 100);
+}
+
+function checkPin() {
+  var val = (document.getElementById('pin-input') || {value:''}).value;
+  if (val === ADMIN_PIN) {
+    _pendingAdminLogin = false;
+    _doLogin(getAdminName());
+  } else {
+    var err = document.getElementById('pin-err');
+    if (err) { err.textContent = 'Невірний PIN'; setTimeout(function(){ err.textContent=''; }, 2000); }
+    var inp = document.getElementById('pin-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+function applyManagerUI() {
+  // Налаштування — тільки адмін
+  var settingsBtn = document.querySelector('[data-sec="settings"]');
+  if (settingsBtn) settingsBtn.style.display = isAdmin ? '' : 'none';
+  // Аналітика — тільки адмін (бачить всіх)
+  // (залишаємо для всіх, але дані фільтруватимуться)
+}
+
+function switchManager() {
+  try { localStorage.removeItem('crm_manager'); } catch(e) {}
+  currentManager = null;
+  isAdmin = false;
+  showLoginScreen();
+}
+
+function showLoginScreen() {
+  var mgrs = DEFS.MANAGERS.filter(function(m){ return m !== 'Не призначено'; });
+  var adminName = getAdminName();
+  var h = '';
+  for (var i = 0; i < mgrs.length; i++) {
+    var m = mgrs[i];
+    var isA = (m === adminName);
+    h += '<button onclick="loginAs(\'' + esc(m) + '\')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:.5px solid var(--bd2);border-radius:10px;background:' + (isA ? 'var(--bbg)' : 'var(--bg3)') + ';cursor:pointer;font-family:inherit;width:100%;text-align:left;transition:background .15s">';
+    h += '<div style="width:36px;height:36px;border-radius:50%;background:' + (isA ? 'var(--blue)' : 'var(--bg2)') + ';color:' + (isA ? '#fff' : 'var(--text)') + ';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;border:.5px solid var(--bd2)">' + String(m).slice(0,2).toUpperCase() + '</div>';
+    h += '<div><div style="font-size:14px;font-weight:500">' + esc(m) + '</div>';
+    h += '<div style="font-size:11px;color:var(--text2)">' + (isA ? '👑 Адмін · повний доступ' : 'Менеджер · свої дані') + '</div></div>';
+    h += '</button>';
+  }
+  document.getElementById('mgr-list').innerHTML = h;
+  document.getElementById('mgr-login').style.display = 'flex';
+}
+
+// Фільтрує клієнтів по менеджеру
+// Холодна база — окремий розділ, не показується в Контактах і Воронці
+function clientsForCurrentMgr(list) {
+  if (isAdmin) {
+    return (list || clients).filter(function(c) { return c.stage !== COLD_STAGE; });
+  }
+  return (list || clients).filter(function(c) {
+    if (c.stage === COLD_STAGE) return false; // холодна база — окремо
+    return !c.manager || c.manager === currentManager || c.manager === 'Не призначено';
+  });
+}
+
+// Фільтрує завдання по менеджеру (адмін бачить всі)
+function tasksForCurrentMgr(list) {
+  if (isAdmin) return list;
+  return list.filter(function(t) {
+    return !t.manager || t.manager === currentManager || t.manager === 'Не призначено';
+  });
+}
+
+// Фільтрує проекти по менеджеру
+function proposalsForCurrentMgr(list) {
+  if (isAdmin) return list;
+  return list.filter(function(p) {
+    return !p.manager || p.manager === currentManager || p.manager === 'Не призначено';
+  });
+}
 
 var DEFS = {
   pipeStages: ['Новий лід','Перший контакт','Прорахунок','Відправлено КП','Очікування відповіді','Follow-up','Погодження','Замовлення'],
@@ -596,7 +769,7 @@ var DEFS = {
   SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
   PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
-  MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено'],
+  MANAGERS:   ['Ткач Герман','Леонід','Не призначено'],
   TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок'],
   TAGS: ['Битова хімія','Снеки','Молочка','Кондитерка','Преміум','Масмаркет','Дистриб\'ютор','Імпортер','Локальний виробник']
 };
@@ -604,8 +777,40 @@ var DEFS = {
 var LISTS;
 try { LISTS = JSON.parse(localStorage.getItem('crm_lists') || 'null') || JSON.parse(JSON.stringify(DEFS)); }
 catch(e) { LISTS = JSON.parse(JSON.stringify(DEFS)); }
-function gl(k) { return LISTS[k] || DEFS[k] || []; }
-function saveLists() { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); }
+function gl(k) { return (LISTS && LISTS[k]) || DEFS[k] || []; }
+
+// Зберігає налаштування в Google Sheets (аркуш "settings") + локально як кеш
+function saveLists() {
+  try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
+  // Зберігаємо в Sheets — один рядок: key=value
+  var rows = [];
+  for (var k in LISTS) {
+    rows.push([k, JSON.stringify(LISTS[k])]);
+  }
+  apiPost({sheet:'settings', action:'set_all', rows: rows});
+}
+
+// Завантажує налаштування з Google Sheets
+function loadSettings(cb) {
+  apiGet('settings').then(function(data) {
+    if (data && data.length) {
+      var loaded = {};
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        var k = row.key || row['0'] || row[Object.keys(row)[0]];
+        var v = row.value || row['1'] || row[Object.keys(row)[1]];
+        if (k && v) {
+          try { loaded[k] = JSON.parse(v); } catch(e) { loaded[k] = v; }
+        }
+      }
+      if (Object.keys(loaded).length) {
+        LISTS = loaded;
+        try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
+      }
+    }
+    if (cb) cb();
+  }).catch(function() { if (cb) cb(); });
+}
 
 // ── USER COLORS ──
 var COLOR_CATS = ['INDUSTRIES','STAGES','PROP_STATUSES','pipeStages'];
@@ -847,6 +1052,7 @@ function goTo(el) {
   if (id === 'clients')    { populateFilters(); filterClients(); }
   if (id === 'report')     { generateReport(); }
   if (id === 'tasks')      { renderTasks(); }
+  if (id === 'coldbase')   { renderColdBase(); }
 }
 function goToSec(sec) {
   var el = document.querySelector('[data-sec="' + sec + '"]');
@@ -888,6 +1094,12 @@ function apiGet(sheet) {
 
 function apiPost(payload) {
   fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) }).catch(function() {});
+}
+
+// Оновлює тільки конкретні поля — не перезаписує весь рядок
+// fields = {manager: 'Герман', stage: 'Погодження'}
+function apiPatch(sheet, id, fields) {
+  apiPost({sheet: sheet, action: 'patch', id: id, fields: fields});
 }
 
 // Гарантує що phones/emails завжди JSON-рядок масиву об'єктів {val, label}
@@ -1051,7 +1263,8 @@ function initDragDrop() {
     if (!c || c.stage === newStage) return;
     c.stage = newStage;
     c.last = new Date().toLocaleDateString('uk-UA');
-    apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+    // patch — оновлює тільки stage і last, не чіпає інші поля
+    apiPatch('clients', c.id, {stage: newStage, last: c.last});
     renderPipeline();
     renderClients();
     updateStats();
@@ -1066,25 +1279,28 @@ function globalSearch() {
   if (!q || q.length < 2) { res.style.display = 'none'; return; }
 
   var found = [];
+  var myClients = clientsForCurrentMgr(clients);
+  var myTasks = tasksForCurrentMgr(tasks);
+  var myProposals = proposalsForCurrentMgr(proposals);
 
   // Search clients
-  for (var i = 0; i < clients.length; i++) {
-    var c = clients[i];
+  for (var i = 0; i < myClients.length; i++) {
+    var c = myClients[i];
     var text = [c.name,c.contact,c.role,c.phone,c.email,c.industry,c.notes].join(' ').toLowerCase();
     if (text.indexOf(q) >= 0) found.push({type:'client', id:c.id, title:c.name, sub:c.contact||'', tag:c.stage||''});
   }
 
   // Search tasks
-  for (var i = 0; i < tasks.length; i++) {
-    var t = tasks[i];
+  for (var i = 0; i < myTasks.length; i++) {
+    var t = myTasks[i];
     if ((t.title||'').toLowerCase().indexOf(q) >= 0 || (t.clientName||'').toLowerCase().indexOf(q) >= 0) {
       found.push({type:'task', id:t.id, title:t.title||'', sub:t.clientName||'', tag:t.due||''});
     }
   }
 
   // Search proposals
-  for (var i = 0; i < proposals.length; i++) {
-    var p = proposals[i];
+  for (var i = 0; i < myProposals.length; i++) {
+    var p = myProposals[i];
     if ((p.client||'').toLowerCase().indexOf(q) >= 0 || (p.action||'').toLowerCase().indexOf(q) >= 0) {
       found.push({type:'proposal', id:p.id, title:p.client||'', sub:p.action||'', tag:p.status||''});
     }
@@ -1178,7 +1394,8 @@ function isTaskToday(due) {
 }
 
 function renderDashTasks() {
-  var active = tasks.filter(function(t) { return !t.done; });
+  var myTasks = tasksForCurrentMgr(tasks);
+  var active = myTasks.filter(function(t) { return !t.done; });
   var overdue = active.filter(function(t) { return isTaskOverdue(t.due); });
   var today   = active.filter(function(t) { return !isTaskOverdue(t.due) && isTaskToday(t.due); });
   var future  = active.filter(function(t) { return !isTaskOverdue(t.due) && !isTaskToday(t.due) && t.due !== 'Без дедлайну'; });
@@ -1231,6 +1448,7 @@ function renderAll() {
   renderActivity();
   renderRecentClients();
   renderDashKP();
+  renderColdBase();
   updateStats();
   populateFilters();
   restoreFilterState();
@@ -1240,7 +1458,7 @@ function renderAll() {
 function renderRecentClients() {
   var el = document.getElementById('dash-recent');
   if (!el) return;
-  var sorted = clients.slice().sort(function(a,b) {
+  var sorted = clientsForCurrentMgr(clients).slice().sort(function(a,b) {
     return parseMyDate(b.last) - parseMyDate(a.last);
   });
   var show = sorted.slice(0, 15);
@@ -1262,7 +1480,8 @@ function renderRecentClients() {
 function renderDashKP() {
   var el = document.getElementById('dash-kp');
   if (!el) return;
-  var open = proposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; });
+  var myProposals = proposalsForCurrentMgr(proposals);
+  var open = myProposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; });
   if (!open.length) { el.innerHTML = '<div style="padding:12px 16px;font-size:13px;color:var(--text2)">Немає активних проектів</div>'; return; }
   var h = '';
   for (var i = 0; i < open.length; i++) {
@@ -1287,7 +1506,7 @@ function renderDashKP() {
 
 // ── CLIENTS ──
 function renderClients(list) {
-  list = list || clients;
+  list = clientsForCurrentMgr(list || clients);
   var tbody = document.getElementById('ctbody');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Контактів немає</td></tr>';
@@ -1299,8 +1518,11 @@ function renderClients(list) {
     var st = stageColor(c.stage);
     var cbt = indBgTxt(c.industry);
     // data-action на самому <tr> — клік по будь-якому місцю рядка відкриває картку
-    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer">';
-    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
+    var isCold = (c.stage === 'Холодна база');
+    var isMine = isAdmin || !c.manager || c.manager === currentManager;
+    var rowStyle = isCold && !isMine ? 'cursor:pointer;opacity:0.7' : 'cursor:pointer';
+    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="' + rowStyle + '">';
+    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><div><span style="font-weight:500">' + esc(c.name) + '</span>' + (isCold && !isMine ? '<div style="font-size:10px;color:var(--text2)">🧊 Холодна база</div>' : '') + '</div></div></td>';
     h += '<td><div>' + esc(c.contact || '') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
     h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
     var cTags = (c.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
@@ -1310,7 +1532,6 @@ function renderClients(list) {
     h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
     h += '<td onclick="event.stopPropagation()"><div class="ra">';
     h += '<button class="ib" data-action="open-client" data-id="' + esc(c.id) + '"><i class="ti ti-eye"></i></button>';
-    h += '<button class="ib d" data-action="del-client" data-id="' + esc(c.id) + '"><i class="ti ti-trash"></i></button>';
     h += '</div></td>';
     h += '</tr>';
   }
@@ -1321,10 +1542,11 @@ function populateFilters() {
   var indSel = document.getElementById('cind');
   var stageSel = document.getElementById('cstage');
   if (!indSel || !stageSel) return;
+  var myClients = clientsForCurrentMgr(clients);
   var inds = [], stages = [];
-  for (var i = 0; i < clients.length; i++) {
-    var ind = clients[i].industry || '';
-    var stg = clients[i].stage || '';
+  for (var i = 0; i < myClients.length; i++) {
+    var ind = myClients[i].industry || '';
+    var stg = myClients[i].stage || '';
     if (ind && inds.indexOf(ind) < 0) inds.push(ind);
     if (stg && stages.indexOf(stg) < 0) stages.push(stg);
   }
@@ -1352,7 +1574,7 @@ function filterClients() {
   var ind = (document.getElementById('cind') || {value:''}).value;
   var stage = (document.getElementById('cstage') || {value:''}).value;
   var sort = (document.getElementById('csort') || {value:'new'}).value;
-  var list = clients.filter(function(c) {
+  var list = clientsForCurrentMgr(clients).filter(function(c) {
     var mq = (c.name || '').toLowerCase().indexOf(q) >= 0 || (c.contact || '').toLowerCase().indexOf(q) >= 0;
     var mi = !ind || (c.industry || '') === ind;
     var ms = !stage || (c.stage || '') === stage;
@@ -1541,9 +1763,15 @@ function openClient(id) {
 
   h += '</div>';
 
-  // Duplicate
-  h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:flex-end">';
+  // Duplicate + Cold Base
+  h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:space-between;align-items:center">';
   h += '<button class="btn s" data-action="dup-client" data-id="' + esc(id) + '" style="font-size:11px"><i class="ti ti-copy"></i> Дублювати картку</button>';
+  var isColdNow = (c.stage === 'Холодна база');
+  if (isColdNow) {
+    h += '<button class="btn s" onclick="restoreFromCold(\'' + esc(id) + '\')" style="font-size:11px;color:var(--blue)"><i class="ti ti-arrow-back-up"></i> Повернути з бази</button>';
+  } else {
+    h += '<button class="btn s" onclick="sendToCold(\'' + esc(id) + '\')" style="font-size:11px;color:var(--text2)"><i class="ti ti-snowflake"></i> В холодну базу</button>';
+  }
   h += '</div>';
   h += '</div>';
   document.getElementById('drbody').innerHTML = h;
@@ -1561,18 +1789,89 @@ function openClient(id) {
   }
 }
 
+// ── ХОЛОДНА БАЗА ──
+var COLD_STAGE = 'Холодна база';
+
+function sendToCold(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  if (!confirm('Перенести "' + c.name + '" в холодну базу?\nКлієнт буде видимий обом менеджерам.')) return;
+  c._prevStage = c.stage; // зберігаємо попередній етап
+  c.stage = COLD_STAGE;
+  c.last = new Date().toLocaleDateString('uk-UA');
+  apiPatch('clients', c.id, {stage: COLD_STAGE, last: c.last, _prevStage: c._prevStage || ''});
+  closeDrawer();
+  renderAll();
+  addAct('🧊 ' + esc(c.name) + ' → Холодна база', '#888');
+}
+
+function restoreFromCold(id) {
+  var c = clients.find(function(x) { return String(x.id) === String(id); });
+  if (!c) return;
+  var prevStage = c._prevStage || 'Новий лід';
+  if (!confirm('Повернути "' + c.name + '" з холодної бази?\nЕтап буде: ' + prevStage)) return;
+  c.stage = prevStage;
+  c._prevStage = '';
+  c.last = new Date().toLocaleDateString('uk-UA');
+  apiPatch('clients', c.id, {stage: prevStage, last: c.last, _prevStage: ''});
+  closeDrawer();
+  renderAll();
+  addAct('↩️ ' + esc(c.name) + ' повернуто з холодної бази', '#185FA5');
+}
+
+function getColdClients() {
+  return clients.filter(function(c) { return c.stage === COLD_STAGE; });
+}
+
+function renderColdBase(list) {
+  var data = list || getColdClients();
+  var tbody = document.getElementById('cbtbody');
+  if (!tbody) return;
+  // Оновлюємо бейдж
+  var badge = document.getElementById('cbb');
+  if (badge) badge.textContent = getColdClients().length;
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2)">Холодна база порожня</td></tr>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < data.length; i++) {
+    var c = data[i];
+    var cbt = indBgTxt(c.industry);
+    h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="cursor:pointer">';
+    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><span style="font-weight:500">' + esc(c.name) + '</span></div></td>';
+    h += '<td><div>' + esc(c.contact || '—') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
+    h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + esc(c.manager || '—') + '</td>';
+    h += '<td style="font-size:12px;color:var(--text2)">' + fmtDate(c.last || '') + '</td>';
+    h += '<td onclick="event.stopPropagation()"><button class="btn s" onclick="restoreFromCold(\'' + esc(c.id) + '\')" style="font-size:11px"><i class="ti ti-arrow-back-up"></i> Повернути</button></td>';
+    h += '</tr>';
+  }
+  tbody.innerHTML = h;
+}
+
+function filterColdBase() {
+  var q = (document.getElementById('cbsrch') || {value:''}).value.toLowerCase();
+  var list = getColdClients().filter(function(c) {
+    return (c.name||'').toLowerCase().indexOf(q) >= 0 ||
+           (c.contact||'').toLowerCase().indexOf(q) >= 0 ||
+           (c.industry||'').toLowerCase().indexOf(q) >= 0;
+  });
+  renderColdBase(list);
+}
+
 function quickChangeStage(id, newStage) {
   if (!newStage) return;
   var c = clients.find(function(x) { return String(x.id) === String(id); });
   if (!c || c.stage === newStage) return;
   c.stage = newStage;
   c.last = new Date().toLocaleDateString('uk-UA');
-  apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+  // patch — тільки stage і last, не чіпаємо history та інші поля
+  apiPatch('clients', c.id, {stage: newStage, last: c.last});
   renderPipeline();
   renderClients();
   updateStats();
   addAct(esc(c.name) + ' → ' + esc(newStage), '#185FA5');
-  // refresh drawer
   openClient(id);
 }
 
@@ -1582,7 +1881,6 @@ function saveQuickHist(id) {
   var inp = document.getElementById('qhi');
   if (!inp || !inp.value.trim()) return;
   var typeSel = document.getElementById('qhi-type');
-  var emojiMap = {};
   var typeVal = typeSel ? typeSel.value : '';
   var prefix = typeVal ? typeVal + ': ' : '';
   var text = prefix + inp.value.trim();
@@ -1592,7 +1890,8 @@ function saveQuickHist(id) {
   hist.unshift({text: text, date: today});
   c.history = JSON.stringify(hist);
   c.last = today;
-  apiPost({sheet:'clients', action:'update', id:c.id, row:buildClientRow(c)});
+  // patch — тільки history і last
+  apiPatch('clients', c.id, {history: c.history, last: today});
   openClient(id);
 }
 
@@ -1701,22 +2000,23 @@ function renderCompanies() {
   var q = (document.getElementById('compsrch') || {value:''}).value.toLowerCase();
   var indF = (document.getElementById('compind') || {value:''}).value;
   var sortF = (document.getElementById('compsort') || {value:'az'}).value;
+  var myClients = clientsForCurrentMgr(clients);
   // Populate industry filter
   var indSel = document.getElementById('compind');
   if (indSel) {
     var currentVal = indSel.value;
     var allInds = [];
-    for (var i = 0; i < clients.length; i++) { if (clients[i].industry && allInds.indexOf(clients[i].industry) < 0) allInds.push(clients[i].industry); }
+    for (var i = 0; i < myClients.length; i++) { if (myClients[i].industry && allInds.indexOf(myClients[i].industry) < 0) allInds.push(myClients[i].industry); }
     allInds.sort();
     var indHtml = '<option value="">Всі галузі</option>';
     for (var i = 0; i < allInds.length; i++) indHtml += '<option value="' + esc(allInds[i]) + '"' + (allInds[i] === currentVal ? ' selected' : '') + '>' + esc(allInds[i]) + '</option>';
     indSel.innerHTML = indHtml;
   }
   var map = {};
-  for (var i = 0; i < clients.length; i++) {
-    var k = clients[i].name || '?';
+  for (var i = 0; i < myClients.length; i++) {
+    var k = myClients[i].name || '?';
     if (!map[k]) map[k] = [];
-    map[k].push(clients[i]);
+    map[k].push(myClients[i]);
   }
   var keys = Object.keys(map).filter(function(k) {
     var matchQ = k.toLowerCase().indexOf(q) >= 0;
@@ -1794,10 +2094,11 @@ function addToCompany(name) {
 // ── PIPELINE ──
 function renderPipeline() {
   var stages = gl('pipeStages');
+  var myclients = clientsForCurrentMgr(clients);
   var h = '';
   for (var i = 0; i < stages.length; i++) {
     var s = stages[i];
-    var dd = clients.filter(function(c) { return c.stage === s; });
+    var dd = myclients.filter(function(c) { return c.stage === s; });
     h += '<div class="pcol">';
     var pipeColors = ['#E6F1FB','#F1EFE8','#FAEEDA','#FAEEDA','#FAEEDA','#FAECE7','#EEEDFE','#EAF3DE','#EAF3DE','#F1EFE8','#FAEEDA','#EEEDFE'];
     var pipeTexts  = ['#0C447C','#444441','#633806','#633806','#633806','#712B13','#3C3489','#27500A','#27500A','#444441','#633806','#3C3489'];
@@ -1821,14 +2122,15 @@ function renderPipeline() {
 
 // ── PROPOSALS ──
 function renderProposals() {
+  var myProposals = proposalsForCurrentMgr(proposals);
   var tbody = document.getElementById('ptbody');
-  if (!proposals.length) {
+  if (!myProposals.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text2)">Проектів ще немає</td></tr>';
     return;
   }
   var h = '';
-  for (var i = 0; i < proposals.length; i++) {
-    var p = proposals[i];
+  for (var i = 0; i < myProposals.length; i++) {
+    var p = myProposals[i];
     var isOd = p.status === 'Прострочено';
     // Parse files
     var pfiles = [];
@@ -1967,8 +2269,9 @@ function clearArchive() {
 
 // ── TASKS ──
 function renderTasks() {
-  var active  = tasks.filter(function(t){ return !t.done; });
-  var archive = tasks.filter(function(t){ return t.done; });
+  var myTasks = tasksForCurrentMgr(tasks);
+  var active  = myTasks.filter(function(t){ return !t.done; });
+  var archive = myTasks.filter(function(t){ return t.done; });
 
   // Лічильник архіву
   var archCnt = document.getElementById('arch-cnt');
@@ -2108,11 +2411,14 @@ function fillTaskTitle() {
 
 // ── STATS ──
 function updateStats() {
-  var active = tasks.filter(function(t) { return !t.done; }).length;
-  var od = tasks.filter(function(t) { return !t.done && t.overdue; }).length;
-  var openKP = proposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
-  var pipeClients = clients.filter(function(c) { return gl('pipeStages').indexOf(c.stage) >= 0; }).length;
-  document.getElementById('stc').textContent = clients.length;
+  var myClients = clientsForCurrentMgr(clients);
+  var myTasks = tasksForCurrentMgr(tasks);
+  var myProps = proposalsForCurrentMgr(proposals);
+  var active = myTasks.filter(function(t) { return !t.done; }).length;
+  var od = myTasks.filter(function(t) { return !t.done && t.overdue; }).length;
+  var openKP = myProps.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var pipeClients = myClients.filter(function(c) { return gl('pipeStages').indexOf(c.stage) >= 0; }).length;
+  document.getElementById('stc').textContent = myClients.length;
   document.getElementById('stk').textContent = openKP;
   document.getElementById('stt').textContent = active;
   document.getElementById('stod').textContent = od ? od + ' прострочено' : '';
@@ -2121,8 +2427,12 @@ function updateStats() {
 }
 
 function updateBadges() {
-  document.getElementById('tkb').textContent = tasks.filter(function(t) { return !t.done; }).length;
-  document.getElementById('kpb').textContent = proposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var myTasks = tasksForCurrentMgr(tasks);
+  var myProps = proposalsForCurrentMgr(proposals);
+  document.getElementById('tkb').textContent = myTasks.filter(function(t) { return !t.done; }).length;
+  document.getElementById('kpb').textContent = myProps.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var cbb = document.getElementById('cbb');
+  if (cbb) cbb.textContent = getColdClients().length || '';
 }
 
 // ── ACTIVITY ──
@@ -2449,6 +2759,18 @@ function renderSettings() {
   }
   // Reset colors button
   h += '<div style="margin-top:8px"><button class="btn d" onclick="resetColors()"><i class="ti ti-refresh"></i> Скинути кольори до стандартних</button></div>';
+  // PIN change for admin
+  if (isAdmin) {
+    h += '<div class="card" style="margin-top:16px">';
+    h += '<div class="ch" style="background:var(--abg)"><span class="ct" style="color:var(--atxt)"><i class="ti ti-lock" style="vertical-align:-2px"></i> PIN-код адміна</span></div>';
+    h += '<div style="padding:14px 16px">';
+    h += '<p style="font-size:12px;color:var(--text2);margin-bottom:12px">Поточний PIN: <b>' + ADMIN_PIN + '</b>. Змінити:</p>';
+    h += '<div style="display:flex;gap:8px;align-items:center">';
+    h += '<input id="new-pin" type="password" inputmode="numeric" maxlength="8" placeholder="Новий PIN" style="padding:8px 12px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;font-family:inherit;width:140px">';
+    h += '<button class="btn p s" onclick="changeAdminPin()"><i class="ti ti-check"></i> Зберегти</button>';
+    h += '</div><div id="pin-save-msg" style="font-size:12px;margin-top:8px;height:16px"></div>';
+    h += '</div></div>';
+  }
   document.getElementById('setgrid').innerHTML = h;
 }
 
@@ -2583,6 +2905,18 @@ function resetLists() {
   if (!confirm('Скинути до стандартних?')) return;
   LISTS = JSON.parse(JSON.stringify(DEFS));
   saveLists(); renderSettings();
+}
+
+function changeAdminPin() {
+  var inp = document.getElementById('new-pin');
+  var msg = document.getElementById('pin-save-msg');
+  if (!inp) return;
+  var val = inp.value.trim();
+  if (!val || val.length < 4) { if (msg) { msg.textContent = 'Мінімум 4 символи'; msg.style.color = 'var(--red)'; } return; }
+  ADMIN_PIN = val;
+  try { localStorage.setItem('crm_admin_pin', val); } catch(e) {}
+  inp.value = '';
+  if (msg) { msg.textContent = '✓ PIN змінено!'; msg.style.color = 'var(--gtxt)'; setTimeout(function(){ msg.textContent=''; renderSettings(); }, 1500); }
 }
 
 // ── AUTOCOMPLETE ──
@@ -2734,7 +3068,9 @@ function buildClientForm(c) {
   for (var i = 0; i < stages.length; i++) stOpts += '<option value="' + esc(stages[i]) + '"' + (stages[i] === (c.stage||'') ? ' selected' : '') + '>' + esc(stages[i]) + '</option>';
   for (var i = 0; i < inds.length; i++)   indOpts += '<option value="' + esc(inds[i]) + '"' + (inds[i] === (c.industry||'') ? ' selected' : '') + '>' + esc(inds[i]) + '</option>';
   for (var i = 0; i < srcs.length; i++)   srcOpts += '<option value="' + esc(srcs[i]) + '"' + (srcs[i] === (c.source||'') ? ' selected' : '') + '>' + esc(srcs[i]) + '</option>';
-  for (var i = 0; i < mgrs.length; i++)   mgrOpts += '<option value="' + esc(mgrs[i]) + '"' + (mgrs[i] === (c.manager||'') ? ' selected' : '') + '>' + esc(mgrs[i]) + '</option>';
+  // Для нового клієнта підставляємо поточного менеджера
+  var defaultMgr = c.manager || (currentManager && currentManager !== 'Не призначено' ? currentManager : '');
+  for (var i = 0; i < mgrs.length; i++)   mgrOpts += '<option value="' + esc(mgrs[i]) + '"' + (mgrs[i] === defaultMgr ? ' selected' : '') + '>' + esc(mgrs[i]) + '</option>';
   var h = '';
   h += '<div class="fr"><label class="flab">Назва компанії *</label>';
   h += '<div class="acw"><input class="fi" id="fname" value="' + esc(c.name||'') + '" placeholder="Напр. АТБ-Маркет" oninput="acInput()" autocomplete="off">';
@@ -2967,6 +3303,11 @@ function openModal(type) {
     h += '<div class="fr"><label class="flab">Час</label><input class="fi" id="ftime" type="time"></div>';
     h += '</div>';
     h += '<div class="fr"><label class="flab">Відповідальний</label><select class="fi" id="fmgr2">' + mopts + '</select></div>';
+    // Автоматично вибираємо поточного менеджера якщо нічого не вибрано
+    setTimeout(function() {
+      var sel = document.getElementById('fmgr2');
+      if (sel && !sel.value && currentManager) sel.value = currentManager;
+    }, 30);
   } else if (type === 'proposal') {
     var psts = gl('PROP_STATUSES');
     var pstopts = '<option value="">— обрати —</option>';
@@ -2982,7 +3323,7 @@ function openModal(type) {
     h += '<div class="fr"><label class="flab">Сума (грн)</label><input class="fi" id="famt" type="number" placeholder="95000"></div>';
     h += '</div>';
     h += '<div class="fg2">';
-    h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fpmgr"><option value="">—</option>' + gl('MANAGERS').map(function(m){return '<option>'+esc(m)+'</option>';}).join('') + '</select></div>';
+    h += '<div class="fr"><label class="flab">Менеджер</label><select class="fi" id="fpmgr"><option value="">—</option>' + gl('MANAGERS').map(function(m){return '<option' + (m === currentManager ? ' selected' : '') + '>'+esc(m)+'</option>';}).join('') + '</select></div>';
     h += '<div class="fr"><label class="flab">Дедлайн</label><input class="fi" id="fpddl" type="date"></div>';
     h += '</div>';
     h += '<div class="fr"><label class="flab">Наступна дія</label><input class="fi" id="faction" placeholder="Follow-up 10.06..."></div>';
@@ -3063,6 +3404,32 @@ function saveModal() {
       addAct('Оновлено: ' + esc(name), '#185FA5');
       closeModal(); openClient(curEditId);
     } else {
+      // Перевірка на дублі — тільки по імені контакту або телефону
+      var duplicates = [];
+      if (contact || phones.length) {
+        duplicates = clients.filter(function(x) {
+          // Збіг по імені контакту
+          if (contact && x.contact && x.contact.toLowerCase() === contact.toLowerCase()) return true;
+          // Збіг по телефону
+          if (phones.length) {
+            var xPhones = parseListVals(x.phones || x.phone || '');
+            for (var pi = 0; pi < phones.length; pi++) {
+              var ph = typeof phones[pi] === 'object' ? phones[pi].val : phones[pi];
+              ph = String(ph).replace(/\D/g,'');
+              if (!ph) continue;
+              for (var xi = 0; xi < xPhones.length; xi++) {
+                if (String(xPhones[xi]).replace(/\D/g,'') === ph) return true;
+              }
+            }
+          }
+          return false;
+        });
+      }
+      if (duplicates.length > 0) {
+        var dupNames = duplicates.map(function(x){ return '"' + (x.contact || x.name) + (x.name ? ' (' + x.name + ')' : '') + '"'; }).join(', ');
+        var proceed = confirm('⚠️ Можливий дубль!\n\nВже є контакт: ' + dupNames + '\n\nВсе одно створити новий?');
+        if (!proceed) return;
+      }
       var id = uid();
       var phonesJson = safePhones(phones);
       var emailsJson = safeEmails(emails);
@@ -3222,7 +3589,31 @@ document.getElementById('ddate').textContent = days[now.getDay()] + ', ' + now.t
 
 renderAll();
 ss('spin', 'Підключення...');
-syncAll();
+
+// Завантажуємо налаштування з Sheets, потім дані
+loadSettings(function() {
+  renderAll(); // перерендерити з актуальними налаштуваннями
+  syncAll();
+});
+
+// Автосинхронізація кожні 2 хвилини
+setInterval(function() {
+  syncAll();
+}, 2 * 60 * 1000);
+
+// ── MANAGER INIT ──
+// Перевіряємо збережений менеджер або показуємо екран вибору
+(function initManager() {
+  var saved = null;
+  try { saved = localStorage.getItem('crm_manager'); } catch(e) {}
+  var mgrs = DEFS.MANAGERS.filter(function(m){ return m !== 'Не призначено'; });
+  if (saved && mgrs.indexOf(saved) >= 0) {
+    // Збережена сесія — заходимо без PIN (вже авторизувались раніше)
+    _doLogin(saved);
+  } else {
+    showLoginScreen();
+  }
+})();
 
 // Відновлюємо останній розділ після перезавантаження
 try {
