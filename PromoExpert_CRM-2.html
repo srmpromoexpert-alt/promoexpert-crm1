@@ -619,7 +619,7 @@ var currentManager = null;
 var isAdmin = false;
 
 function getAdminName() {
-  return (LISTS && LISTS.MANAGERS && LISTS.MANAGERS[0]) || (DEFS.MANAGERS[0]);
+  return DEFS.MANAGERS[0]; // завжди з DEFS, не з localStorage
 }
 
 // ── PIN для адміна ──
@@ -700,7 +700,7 @@ function switchManager() {
 }
 
 function showLoginScreen() {
-  var mgrs = gl('MANAGERS').filter(function(m){ return m !== 'Не призначено'; });
+  var mgrs = DEFS.MANAGERS.filter(function(m){ return m !== 'Не призначено'; });
   var adminName = getAdminName();
   var h = '';
   for (var i = 0; i < mgrs.length; i++) {
@@ -746,7 +746,7 @@ var DEFS = {
   SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
   PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
-  MANAGERS:   ['Іванова О.','Петров М.','Коваль С.','Не призначено'],
+  MANAGERS:   ['Ткач Герман','Леонід','Не призначено'],
   TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок'],
   TAGS: ['Битова хімія','Снеки','Молочка','Кондитерка','Преміум','Масмаркет','Дистриб\'ютор','Імпортер','Локальний виробник']
 };
@@ -3425,7 +3425,7 @@ syncAll();
 (function initManager() {
   var saved = null;
   try { saved = localStorage.getItem('crm_manager'); } catch(e) {}
-  var mgrs = gl('MANAGERS').filter(function(m){ return m !== 'Не призначено'; });
+  var mgrs = DEFS.MANAGERS.filter(function(m){ return m !== 'Не призначено'; });
   if (saved && mgrs.indexOf(saved) >= 0) {
     // Збережена сесія — заходимо без PIN (вже авторизувались раніше)
     _doLogin(saved);
