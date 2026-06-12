@@ -1517,7 +1517,11 @@ function renderClients(list) {
     var isMine = isAdmin || !c.manager || c.manager === currentManager;
     var rowStyle = isCold && !isMine ? 'cursor:pointer;opacity:0.7' : 'cursor:pointer';
     h += '<tr data-action="open-client" data-id="' + esc(c.id) + '" style="' + rowStyle + '">';
-    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><div><span style="font-weight:500">' + esc(c.name) + '</span>' + (isCold && !isMine ? '<div style="font-size:10px;color:var(--text2)">🧊 Холодна база</div>' : '') + '</div></div></td>';
+    var hasPhone = parseListVals(c.phones || c.phone || '').filter(function(v){ return String(v).trim(); }).length > 0;
+    var hasEmail = parseListVals(c.emails || c.email || '').filter(function(v){ return String(v).trim(); }).length > 0;
+    var hasLinkedin = String(c.linkedin || '').trim().length > 0;
+    var noContact = !hasPhone && !hasEmail && !hasLinkedin;
+    h += '<td><div class="fc"><div class="av" style="background:' + cbt.bg + ';color:' + cbt.txt + '">' + String(c.name||'?').slice(0,2).toUpperCase() + '</div><div><span style="font-weight:500">' + esc(c.name) + '</span>' + (noContact ? ' <span title="Немає контактних даних" style="font-size:11px">⚠️</span>' : '') + (isCold && !isMine ? '<div style="font-size:10px;color:var(--text2)">🧊 Холодна база</div>' : '') + '</div></div></td>';
     h += '<td><div>' + esc(c.contact || '') + '</div><div style="font-size:11px;color:var(--text2)">' + esc(c.role || '') + '</div></td>';
     h += '<td>' + mkTag(c.industry || '—', indColor(c.industry)) + '</td>';
     var cTags = (c.tags||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
@@ -2116,8 +2120,15 @@ function renderPipeline() {
     for (var di = 0; di < dd.length; di++) {
       var x = dd[di];
       var pbt = indBgTxt(x.industry);
+      // Перевірка — чи є хоч якийсь контакт
+      var hasPhone = parseListVals(x.phones || x.phone || '').filter(function(v){ return String(v).trim(); }).length > 0;
+      var hasEmail = parseListVals(x.emails || x.email || '').filter(function(v){ return String(v).trim(); }).length > 0;
+      var hasLinkedin = String(x.linkedin || '').trim().length > 0;
+      var noContact = !hasPhone && !hasEmail && !hasLinkedin;
       h += '<div class="dc" data-action="open-pipe" data-id="' + esc(x.id) + '" draggable="true" data-cid="' + esc(x.id) + '" style="border-left:3px solid ' + pbt.txt + '">';
-      h += '<div class="dn">' + esc(x.name) + '</div>';
+      h += '<div class="dn" style="display:flex;justify-content:space-between;align-items:flex-start">' + esc(x.name);
+      if (noContact) h += '<span title="Немає контактних даних" style="font-size:11px;flex-shrink:0;margin-left:4px">⚠️</span>';
+      h += '</div>';
       h += '<div class="dm">' + esc(x.contact || '') + '</div>';
       h += '</div>';
     }
