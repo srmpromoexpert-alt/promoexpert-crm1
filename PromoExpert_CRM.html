@@ -770,7 +770,7 @@ var DEFS = {
   SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
   PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
-  MANAGERS:   ['Ткач Герман','Леонід','Не призначено'],
+  MANAGERS:   ['Ткач Герман','Леонід Цвілюк','Володимир Ващук','Не призначено'],
   TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок'],
   TAGS: ['Битова хімія','Снеки','Молочка','Кондитерка','Преміум','Масмаркет','Дистриб\'ютор','Імпортер','Локальний виробник']
 };
@@ -782,12 +782,11 @@ function gl(k) { return (LISTS && LISTS[k]) || DEFS[k] || []; }
 
 // Зберігає налаштування в Google Sheets (аркуш "settings") + локально як кеш
 function saveLists() {
+  // MANAGERS завжди беремо з DEFS — щоб не залежало від localStorage
+  LISTS.MANAGERS = DEFS.MANAGERS;
   try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
-  // Зберігаємо в Sheets — один рядок: key=value
   var rows = [];
-  for (var k in LISTS) {
-    rows.push([k, JSON.stringify(LISTS[k])]);
-  }
+  for (var k in LISTS) rows.push([k, JSON.stringify(LISTS[k])]);
   apiPost({sheet:'settings', action:'set_all', rows: rows});
 }
 
