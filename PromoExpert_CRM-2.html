@@ -3355,7 +3355,13 @@ function openModal(type) {
   // fp-file-del handled inline
 }
 
-function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
+function closeModal() {
+  document.getElementById('movl').classList.remove('on');
+  curModal = ''; curEditId = null;
+  renderPipeline();
+  renderClients();
+  updateStats();
+}
 
 // Modal close handled in unified click handler above
 
