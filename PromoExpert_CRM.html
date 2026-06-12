@@ -643,7 +643,7 @@ function getAdminName() {
 }
 
 // ── PIN для адміна ──
-var ADMIN_PIN = (function(){ try { return localStorage.getItem('crm_admin_pin') || '1234'; } catch(e){ return '1234'; } })(); // змініть через Налаштування
+var ADMIN_PIN = (function(){ try { return localStorage.getItem('crm_admin_pin') || '1234'; } catch(e){ return '1234'; } })();
 var _pendingAdminLogin = false;
 
 function loginAs(name) {
@@ -805,6 +805,12 @@ function loadSettings(cb) {
         }
       }
       if (Object.keys(loaded).length) {
+        // Витягуємо PIN окремо
+        if (loaded.ADMIN_PIN) {
+          ADMIN_PIN = loaded.ADMIN_PIN;
+          try { localStorage.setItem('crm_admin_pin', ADMIN_PIN); } catch(e) {}
+          delete loaded.ADMIN_PIN;
+        }
         LISTS = loaded;
         try { localStorage.setItem('crm_lists', JSON.stringify(LISTS)); } catch(e) {}
       }
@@ -2933,7 +2939,15 @@ function changeAdminPin() {
   var val = inp.value.trim();
   if (!val || val.length < 4) { if (msg) { msg.textContent = 'Мінімум 4 символи'; msg.style.color = 'var(--red)'; } return; }
   ADMIN_PIN = val;
+  // Зберігаємо в localStorage як кеш
   try { localStorage.setItem('crm_admin_pin', val); } catch(e) {}
+  // Зберігаємо в Google Sheets
+  apiPost({sheet:'settings', action:'set_all', rows: (function(){
+    var rows = [];
+    for (var k in LISTS) rows.push([k, JSON.stringify(LISTS[k])]);
+    rows.push(['ADMIN_PIN', val]);
+    return rows;
+  })()});
   inp.value = '';
   if (msg) { msg.textContent = '✓ PIN змінено!'; msg.style.color = 'var(--gtxt)'; setTimeout(function(){ msg.textContent=''; renderSettings(); }, 1500); }
 }
