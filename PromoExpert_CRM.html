@@ -200,6 +200,14 @@ tr:hover .ra{opacity:1}
 <div class="app">
   <div class="sb">
     <div class="logo"><h1>PromoExpert CRM</h1><p>Відділ продажів</p></div>
+    <!-- ГЛОБАЛЬНИЙ ПОШУК -->
+    <div style="padding:6px 10px;border-bottom:.5px solid var(--bd)">
+      <div style="position:relative">
+        <input id="gsrch" placeholder="Пошук по всій CRM..." oninput="globalSearch()" style="padding:7px 12px 7px 30px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--bg2);color:var(--text);outline:none;width:100%;box-sizing:border-box">
+        <i class="ti ti-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px"></i>
+      </div>
+      <div id="gsrch-results" style="display:none;position:absolute;left:0;right:0;background:var(--bg2);border:.5px solid var(--bd2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;max-height:400px;overflow-y:auto;margin-top:4px"></div>
+    </div>
     <nav class="nav">
       <button class="nb on" data-sec="dashboard" onclick="goTo(this)"><i class="ti ti-layout-dashboard"></i> Дашборд</button>
       <button class="nb" data-sec="clients" onclick="goTo(this)"><i class="ti ti-users"></i> Контакти</button>
@@ -236,16 +244,9 @@ tr:hover .ra{opacity:1}
     <div id="sec-dashboard" class="sec on">
       <div class="topbar">
         <span class="ttl">Дашборд</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="position:relative">
-            <input id="gsrch" placeholder="Пошук по всій CRM..." oninput="globalSearch()" style="padding:7px 12px 7px 32px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;width:240px">
-            <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:14px"></i>
-          </div>
-          <span id="ddate" style="font-size:12px;color:var(--text2)"></span>
-        </div>
+        <span id="ddate" style="font-size:12px;color:var(--text2)"></span>
       </div>
       <div class="content">
-        <div id="gsrch-results" style="display:none;margin-bottom:16px"></div>
 
         <!-- Stats row -->
         <div class="stats" style="margin-bottom:16px">
@@ -739,10 +740,10 @@ function showLoginScreen() {
 // Холодна база — окремий розділ, не показується в Контактах і Воронці
 function clientsForCurrentMgr(list) {
   if (isAdmin) {
-    return (list || clients).filter(function(c) { return c.stage !== COLD_STAGE; });
+    return (list || clients).filter(function(c) { return !isColdStage(c.stage); });
   }
   return (list || clients).filter(function(c) {
-    if (c.stage === COLD_STAGE) return false; // холодна база — окремо
+    if (isColdStage(c.stage)) return false;
     return !c.manager || c.manager === currentManager || c.manager === 'Не призначено';
   });
 }
@@ -1279,52 +1280,46 @@ function globalSearch() {
   if (!q || q.length < 2) { res.style.display = 'none'; return; }
 
   var found = [];
-  var myClients = clientsForCurrentMgr(clients);
+  var myClients = clientsForCurrentMgr(clients).concat(getColdClients());
   var myTasks = tasksForCurrentMgr(tasks);
   var myProposals = proposalsForCurrentMgr(proposals);
 
-  // Search clients
   for (var i = 0; i < myClients.length; i++) {
     var c = myClients[i];
     var text = [c.name,c.contact,c.role,c.phone,c.email,c.industry,c.notes].join(' ').toLowerCase();
     if (text.indexOf(q) >= 0) found.push({type:'client', id:c.id, title:c.name, sub:c.contact||'', tag:c.stage||''});
   }
-
-  // Search tasks
   for (var i = 0; i < myTasks.length; i++) {
     var t = myTasks[i];
-    if ((t.title||'').toLowerCase().indexOf(q) >= 0 || (t.clientName||'').toLowerCase().indexOf(q) >= 0) {
+    if ((t.title||'').toLowerCase().indexOf(q) >= 0 || (t.clientName||'').toLowerCase().indexOf(q) >= 0)
       found.push({type:'task', id:t.id, title:t.title||'', sub:t.clientName||'', tag:t.due||''});
-    }
   }
-
-  // Search proposals
   for (var i = 0; i < myProposals.length; i++) {
     var p = myProposals[i];
-    if ((p.client||'').toLowerCase().indexOf(q) >= 0 || (p.action||'').toLowerCase().indexOf(q) >= 0) {
+    if ((p.client||'').toLowerCase().indexOf(q) >= 0 || (p.action||'').toLowerCase().indexOf(q) >= 0)
       found.push({type:'proposal', id:p.id, title:p.client||'', sub:p.action||'', tag:p.status||''});
-    }
-  }
-
-  if (!found.length) {
-    res.style.display = 'block';
-    res.innerHTML = '<div class="card"><div style="padding:16px;font-size:13px;color:var(--text2)">Нічого не знайдено по запиту "' + esc(q) + '"</div></div>';
-    return;
   }
 
   var icons = {client:'ti-users', task:'ti-checkbox', proposal:'ti-briefcase'};
   var labels = {client:'Контакт', task:'Завдання', proposal:'Проект'};
-  var h = '<div class="card"><div class="ch"><span class="ct">Результати пошуку (' + found.length + ')</span><button class="lb" onclick="clearSearch()">Закрити ×</button></div>';
-  for (var i = 0; i < Math.min(found.length, 10); i++) {
+
+  if (!found.length) {
+    res.style.display = 'block';
+    res.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--text2)">Нічого не знайдено по «' + esc(q) + '»</div>';
+    return;
+  }
+
+  var h = '<div style="padding:8px 12px;font-size:11px;color:var(--text2);border-bottom:.5px solid var(--bd);display:flex;justify-content:space-between;align-items:center"><span>Знайдено: ' + found.length + '</span><button onclick="clearSearch()" style="border:none;background:none;cursor:pointer;color:var(--text2);font-size:11px">✕ Закрити</button></div>';
+  for (var i = 0; i < Math.min(found.length, 12); i++) {
     var r = found[i];
-    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:.5px solid var(--bd);cursor:pointer" data-action="srch-open" data-type="' + r.type + '" data-id="' + esc(r.id) + '">';
-    h += '<i class="ti ' + icons[r.type] + '" style="color:var(--blue);font-size:16px"></i>';
-    h += '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + esc(r.title) + '</div>';
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:.5px solid var(--bd);cursor:pointer;transition:background .1s" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'" data-action="srch-open" data-type="' + r.type + '" data-id="' + esc(r.id) + '">';
+    h += '<i class="ti ' + icons[r.type] + '" style="color:var(--blue);font-size:15px;flex-shrink:0"></i>';
+    h += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(r.title) + '</div>';
     h += '<div style="font-size:11px;color:var(--text2)">' + labels[r.type] + (r.sub ? ' · ' + esc(r.sub) : '') + '</div></div>';
-    h += '<span class="tag gy" style="font-size:10px">' + esc(r.tag) + '</span>';
+    if (r.tag) h += '<span style="font-size:10px;color:var(--text2);flex-shrink:0">' + esc(r.tag) + '</span>';
     h += '</div>';
   }
-  h += '</div>';
+  if (found.length > 12) h += '<div style="padding:8px 14px;font-size:11px;color:var(--text2)">…ще ' + (found.length - 12) + ' результатів. Уточніть запит.</div>';
   res.innerHTML = h;
   res.style.display = 'block';
 }
@@ -1766,7 +1761,7 @@ function openClient(id) {
   // Duplicate + Cold Base
   h += '<div style="padding:8px 14px;border-top:.5px solid var(--bd);display:flex;justify-content:space-between;align-items:center">';
   h += '<button class="btn s" data-action="dup-client" data-id="' + esc(id) + '" style="font-size:11px"><i class="ti ti-copy"></i> Дублювати картку</button>';
-  var isColdNow = (c.stage === 'Холодна база');
+  var isColdNow = isColdStage(c.stage);
   if (isColdNow) {
     h += '<button class="btn s" onclick="restoreFromCold(\'' + esc(id) + '\')" style="font-size:11px;color:var(--blue)"><i class="ti ti-arrow-back-up"></i> Повернути з бази</button>';
   } else {
@@ -1819,8 +1814,12 @@ function restoreFromCold(id) {
   addAct('↩️ ' + esc(c.name) + ' повернуто з холодної бази', '#185FA5');
 }
 
+function isColdStage(s) {
+  return String(s||'').trim().toLowerCase() === 'холодна база';
+}
+
 function getColdClients() {
-  return clients.filter(function(c) { return c.stage === COLD_STAGE; });
+  return clients.filter(function(c) { return isColdStage(c.stage); });
 }
 
 function renderColdBase(list) {
@@ -2099,6 +2098,15 @@ function renderPipeline() {
   for (var i = 0; i < stages.length; i++) {
     var s = stages[i];
     var dd = myclients.filter(function(c) { return c.stage === s; });
+    // Сортуємо — нові вгорі
+    dd.sort(function(a, b) {
+      // Якщо id містить timestamp (формат 1234567890_xxxx) — сортуємо по ньому
+      var aTs = parseInt(String(a.id).split('_')[0]) || 0;
+      var bTs = parseInt(String(b.id).split('_')[0]) || 0;
+      if (aTs && bTs) return bTs - aTs;
+      // Fallback — по даті останньої дії
+      return String(b.last || '').localeCompare(String(a.last || ''));
+    });
     h += '<div class="pcol">';
     var pipeColors = ['#E6F1FB','#F1EFE8','#FAEEDA','#FAEEDA','#FAEEDA','#FAECE7','#EEEDFE','#EAF3DE','#EAF3DE','#F1EFE8','#FAEEDA','#EEEDFE'];
     var pipeTexts  = ['#0C447C','#444441','#633806','#633806','#633806','#712B13','#3C3489','#27500A','#27500A','#444441','#633806','#3C3489'];
@@ -3355,7 +3363,13 @@ function openModal(type) {
   // fp-file-del handled inline
 }
 
-function closeModal() { document.getElementById('movl').classList.remove('on'); curModal = ''; curEditId = null; }
+function closeModal() {
+  document.getElementById('movl').classList.remove('on');
+  curModal = ''; curEditId = null;
+  renderPipeline();
+  renderClients();
+  updateStats();
+}
 
 // Modal close handled in unified click handler above
 
@@ -3553,7 +3567,12 @@ function saveModal() {
   }
 }
 
-function closeDrawer() { document.getElementById('drawer').classList.remove('on'); }
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('on');
+  // Перемальовуємо воронку щоб карточка одразу переміщалась
+  renderPipeline();
+  updateStats();
+}
 
 // ── DRAWER CLICK HANDLER ──
 var _mdInDrawer = false, _mdInModal = false, _drawerJustOpened = false;
@@ -3565,6 +3584,10 @@ document.addEventListener('click', function(e) {
   var drawer = document.getElementById('drawer');
   // Закриваємо drawer тільки якщо клік був поза ним І drawer не щойно відкрився
   if (!_drawerJustOpened && drawer && drawer.classList.contains('on') && !drawer.contains(e.target) && !_mdInDrawer) closeDrawer();
+  // Закриваємо пошук при кліку поза ним
+  var gsrch = document.getElementById('gsrch');
+  var gres = document.getElementById('gsrch-results');
+  if (gres && gres.style.display !== 'none' && !gres.contains(e.target) && e.target !== gsrch) clearSearch();
   if (e.target === document.getElementById('movl') && !_mdInModal) closeModal();
 });
 
