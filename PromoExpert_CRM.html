@@ -516,6 +516,14 @@ tr:hover .ra{opacity:1}
       </div>
       <div class="content">
         <div class="card">
+          <div class="srch" style="display:flex;align-items:center;gap:8px">
+            <div id="prop-tabs" style="display:flex;border:.5px solid var(--bd2);border-radius:20px;overflow:hidden;flex-shrink:0">
+              <button id="prop-tab-active" onclick="setPropTab('active')" style="padding:6px 16px;border:none;background:var(--blue);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">Активні</button>
+              <button id="prop-tab-archive" onclick="setPropTab('archive')" style="padding:6px 16px;border:none;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit">Архів</button>
+            </div>
+            <i class="ti ti-search" style="color:var(--text2)"></i>
+            <input id="psrch" placeholder="Пошук по проектах..." oninput="renderProposals()">
+          </div>
           <div class="tw">
             <table>
               <thead><tr><th style="width:110px">№ Проекту</th><th>Компанія</th><th>Сума</th><th>Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Наступна дія</th><th style="width:60px">Файли</th><th style="width:50px"></th></tr></thead>
@@ -640,7 +648,7 @@ tr:hover .ra{opacity:1}
         <div class="stats">
           <div class="stat"><div class="slbl">Клієнтів</div><div class="sval" id="anc">0</div></div>
           <div class="stat"><div class="slbl">Проектів всього</div><div class="sval" id="ank">0</div></div>
-          <div class="stat"><div class="slbl">Підписано</div><div class="sval" id="ans">0</div></div>
+          <div class="stat"><div class="slbl">Відвантажено</div><div class="sval" id="ans">0</div></div>
           <div class="stat"><div class="slbl">Завдань виконано</div><div class="sval" id="and2">0</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -908,7 +916,7 @@ var DEFS = {
   STAGES:     ['Новий лід','Перший контакт','Прорахунок','Відправлено КП','Очікування відповіді','Follow-up','Погодження','Замовлення','Закрита угода','Відмова'],
   SOURCES:    ['Конференція','Рекомендація','Холодний дзвінок','LinkedIn','Виставка','Інстаграм','Сайт','Інше'],
   INDUSTRIES: ['Рітейл','FMCG','Фарма','Фінанси','Алкоголь','Косметика','Логістика','Телеком','Інше'],
-  PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Підписано','Прострочено','Відмова'],
+  PROP_STATUSES: ['Готується','Очікування','На розгляді','Погоджується','Відвантажено','Прострочено','Відмова'],
   MANAGERS:   ['Ткач Герман','Леонід Цвілюк','Володимир Ващук','Не призначено'],
   TASK_TEMPLATES: ['Передзвонити','Призначити зустріч','Написати e-mail','Перевірити LinkedIn','Відправити КП','Нагадати про себе','Узгодити рахунок'],
   TAGS: ['Битова хімія','Снеки','Молочка','Кондитерка','Преміум','Масмаркет','Дистриб\'ютор','Імпортер','Локальний виробник']
@@ -986,7 +994,7 @@ function setUserColor(cat, name, cls) {
 // colors defined inside renderPipeline
 // texts defined inside renderPipeline
 var STAG_DEF = {'Новий лід':'bl','Перший контакт':'gy','Прорахунок':'am','Відправлено КП':'am','Очікування відповіді':'am','Follow-up':'co','Погодження':'pu','Замовлення':'gr','Закрита угода':'gr','Відмова':'re'};
-var PTAG_DEF = {'Очікування':'am','На розгляді':'bl','Прострочено':'re','Погоджується':'pu','Готується':'gy','Підписано':'gr','Відмова':'re'};
+var PTAG_DEF = {'Очікування':'am','На розгляді':'bl','Прострочено':'re','Погоджується':'pu','Готується':'gy','Відвантажено':'gr','Відмова':'re'};
 var STAG = STAG_DEF;
 var PTAG = PTAG_DEF;
 function stageColor(s) { return getUserColor('STAGES', s) || STAG_DEF[s] || 'gy'; }
@@ -1175,6 +1183,10 @@ document.addEventListener('click', function(e) {
     var row = e.target.closest('.fp-file-row');
     if (row) row.remove();
   }
+  if (e.target.closest('.fp-pay-del')) {
+    var prow = e.target.closest('.fp-pay-row');
+    if (prow) prow.remove();
+  }
 });
 
 document.addEventListener('click', function(e) {
@@ -1312,8 +1324,8 @@ function syncAll() {
   Promise.all([apiGet('clients'), apiGet('proposals'), apiGet('tasks')]).then(function(res) {
     // Колонки clients: 0=id,1=name,2=contact,3=role,4=phones,5=emails,6=linkedin,7=industry,8=source,9=stage,10=last,11=notes,12=history,13=manager,14=brands,15=tags
     var CLIENT_COLS = ['id','name','contact','role','phones','emails','linkedin','industry','source','stage','last','notes','history','manager','brands','tags'];
-    // Колонки proposals: 0=id,1=client,2=amount,3=projectNum,4=ver,5=deadline,6=status,7=action,8=manager,9=notes,10=files
-    var PROPOSAL_COLS = ['id','client','amount','projectNum','ver','deadline','status','action','manager','notes','files'];
+    // Колонки proposals: 0=id,1=client,2=amount,3=projectNum,4=ver,5=deadline,6=status,7=action,8=manager,9=notes,10=files,11=payments
+    var PROPOSAL_COLS = ['id','client','amount','projectNum','ver','deadline','status','action','manager','notes','files','payments'];
     // Колонки tasks: 0=id,1=title,2=due,3=manager,4=done,5=overdue,6=clientId,7=clientName,8=doneDate
     var TASK_COLS = ['id','title','due','manager','done','overdue','clientId','clientName','doneDate'];
 
@@ -1355,6 +1367,7 @@ function syncAll() {
         if (p.action && p.action.indexOf && p.action.indexOf('T') >= 0 && !p.deadline) {
           p.deadline = p.action; p.action = '';
         }
+        if (p.payments === undefined || p.payments === null) p.payments = '[]';
         return p;
       });
     } catch(e) { console.error('proposals parse error', e); proposals = []; }
@@ -1635,7 +1648,7 @@ function renderDashKP() {
   var el = document.getElementById('dash-kp');
   if (!el) return;
   var myProposals = proposalsForCurrentMgr(proposals);
-  var open = myProposals.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; });
+  var open = myProposals.filter(function(p) { return p.status !== 'Відвантажено' && p.status !== 'Відмова'; });
   if (!open.length) { el.innerHTML = '<div style="padding:12px 16px;font-size:13px;color:var(--text2)">Немає активних проектів</div>'; return; }
   var h = '';
   for (var i = 0; i < open.length; i++) {
@@ -1652,7 +1665,7 @@ function renderDashKP() {
     if (p.manager) sub.push(p.manager);
     if (sub.length) h += '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + esc(sub.join(' · ')) + '</div>';
     h += '</div>';
-    h += mkTag(p.status||'—', propColor(p.status));
+    h += '<span onclick="event.stopPropagation()">' + buildStatusDropdown(p.id, p.status) + '</span>';
     h += '</div>';
   }
   el.innerHTML = h;
@@ -2327,11 +2340,46 @@ function renderPipeline() {
 }
 
 // ── PROPOSALS ──
+var _propTab = 'active'; // 'active' | 'archive'
+var ARCHIVE_STATUSES = ['Відвантажено', 'Відмова'];
+
+function setPropTab(tab) {
+  _propTab = tab;
+  var activeBtn = document.getElementById('prop-tab-active');
+  var archiveBtn = document.getElementById('prop-tab-archive');
+  if (activeBtn && archiveBtn) {
+    if (tab === 'active') {
+      activeBtn.style.background = 'var(--blue)'; activeBtn.style.color = '#fff';
+      archiveBtn.style.background = 'transparent'; archiveBtn.style.color = 'var(--text2)';
+    } else {
+      archiveBtn.style.background = 'var(--blue)'; archiveBtn.style.color = '#fff';
+      activeBtn.style.background = 'transparent'; activeBtn.style.color = 'var(--text2)';
+    }
+  }
+  renderProposals();
+}
+
 function renderProposals() {
   var myProposals = proposalsForCurrentMgr(proposals);
+  var q = (document.getElementById('psrch') || {value:''}).value.toLowerCase().trim();
+
+  // Розділяємо на активні і архів
+  myProposals = myProposals.filter(function(p) {
+    var isArchived = ARCHIVE_STATUSES.indexOf(p.status) >= 0;
+    return _propTab === 'archive' ? isArchived : !isArchived;
+  });
+
+  // Пошук (працює і в архіві — по номеру, компанії, дії)
+  if (q) {
+    myProposals = myProposals.filter(function(p) {
+      var text = [p.projectNum, p.client, p.action, p.notes, p.manager].join(' ').toLowerCase();
+      return text.indexOf(q) >= 0;
+    });
+  }
+
   var tbody = document.getElementById('ptbody');
   if (!myProposals.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text2)">Проектів ще немає</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text2)">' + (_propTab === 'archive' ? 'В архіві ще немає проектів' : 'Проектів ще немає') + '</td></tr>';
     return;
   }
   var h = '';
@@ -2349,7 +2397,7 @@ function renderProposals() {
     h += '<td' + clickTd + '>' + fmtMoney(p.amount) + '</td>';
     h += '<td' + clickTd + ' style="font-size:12px;color:var(--text2)">' + esc(p.manager || '—') + '</td>';
     h += '<td' + clickTd + ' style="font-size:12px;color:' + (isOd ? 'var(--red)' : 'var(--text2)') + '">' + fmtDate(p.deadline || '') + '</td>';
-    h += '<td' + clickTd + '>' + mkTag(p.status || '—', propColor(p.status)) + '</td>';
+    h += '<td onclick="event.stopPropagation()">' + buildStatusDropdown(p.id, p.status) + '</td>';
     h += '<td' + clickTd + ' style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.action || '—') + '</td>';
     h += '<td style="text-align:center">';
     if (pfiles.length) {
@@ -2400,10 +2448,37 @@ function editProp(id) {
     var pfiles = [];
     try { pfiles = JSON.parse(p.files || '[]'); } catch(e) {}
     pfiles.forEach(function(f) { addFileRow(f.name, f.url); });
+    var ppays = [];
+    try { ppays = JSON.parse(p.payments || '[]'); } catch(e) {}
+    ppays.forEach(function(pay) { addPayRow(pay.date, pay.amount, pay.note); });
     document.getElementById('mttl').textContent = 'Редагувати проект';
     var mBtn = document.getElementById('modal-add-task-btn');
     if (mBtn) mBtn.style.display = '';
   }, 80);
+}
+
+function buildStatusDropdown(id, currentStatus) {
+  var statuses = gl('PROP_STATUSES');
+  var h = '<select class="tag ' + propColor(currentStatus) + '" onchange="quickChangeProjStatus(\'' + esc(id) + '\', this.value)" style="border:none;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;font-family:inherit">';
+  for (var i = 0; i < statuses.length; i++) {
+    h += '<option value="' + esc(statuses[i]) + '"' + (statuses[i] === currentStatus ? ' selected' : '') + '>' + esc(statuses[i]) + '</option>';
+  }
+  h += '</select>';
+  return h;
+}
+
+function quickChangeProjStatus(id, newStatus) {
+  var p = proposals.find(function(x) { return String(x.id) === String(id); });
+  if (!p || p.status === newStatus) return;
+  p.status = newStatus;
+  apiPatch('proposals', p.id, {status: newStatus});
+  renderProposals();
+  renderDashKP();
+  updateStats();
+  addAct(esc(p.client || p.projectNum) + ' → ' + esc(newStatus), '#185FA5');
+  // Перерендерити drawer тільки якщо він зараз відкритий для цього проекту
+  var drawer = document.getElementById('drawer');
+  if (drawer && drawer.classList.contains('on')) openProject(id);
 }
 
 function openProject(id) {
@@ -2419,10 +2494,43 @@ function openProject(id) {
   var h = '';
   h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">';
   h += '<div style="font-family:monospace;font-size:15px;font-weight:700;background:var(--bg3);padding:5px 12px;border-radius:8px">' + esc(p.projectNum || '—') + '</div>';
-  h += mkTag(p.status || '—', propColor(p.status));
+  h += buildStatusDropdown(id, p.status);
   h += '</div>';
   if (p.client)  h += '<div class="fg"><div class="fl">Компанія</div><div class="fv">' + esc(p.client) + '</div></div>';
   if (p.amount)  h += '<div class="fg"><div class="fl">Сума</div><div class="fv" style="font-weight:600">' + fmtMoney(p.amount) + '</div></div>';
+  // ── Оплати ──
+  var pays = [];
+  try { pays = JSON.parse(p.payments || '[]'); } catch(e) {}
+  if (pays.length || p.amount) {
+    var totalPaid = 0;
+    for (var pi = 0; pi < pays.length; pi++) totalPaid += (parseFloat(pays[pi].amount) || 0);
+    var totalAmt = parseFloat(p.amount) || 0;
+    var remain = totalAmt - totalPaid;
+    h += '<div class="sl">Оплати</div>';
+    if (pays.length) {
+      for (var pi = 0; pi < pays.length; pi++) {
+        var pay = pays[pi];
+        h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:.5px solid var(--bd)">';
+        h += '<div style="display:flex;align-items:center;gap:8px;font-size:13px">';
+        h += '<i class="ti ti-cash" style="color:var(--gtxt)"></i>';
+        h += '<span>' + (pay.date ? fmtDate(pay.date) : '—') + '</span>';
+        if (pay.note) h += '<span style="color:var(--text2);font-size:12px">' + esc(pay.note) + '</span>';
+        h += '</div>';
+        h += '<div style="font-weight:600;font-size:13px">' + fmtMoney(pay.amount) + '</div>';
+        h += '</div>';
+      }
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0 4px;font-size:13px">';
+      h += '<span style="color:var(--text2)">Сплачено</span>';
+      h += '<span style="font-weight:700;color:var(--gtxt)">' + fmtMoney(totalPaid) + '</span></div>';
+      if (totalAmt) {
+        h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 4px;font-size:13px">';
+        h += '<span style="color:var(--text2)">Залишок</span>';
+        h += '<span style="font-weight:700;color:' + (remain <= 0 ? 'var(--gtxt)' : 'var(--atxt)') + '">' + fmtMoney(remain) + '</span></div>';
+      }
+    } else {
+      h += '<div style="font-size:12px;color:var(--text2);padding:6px 0">Ще не сплачено</div>';
+    }
+  }
   if (p.manager) h += '<div class="fg"><div class="fl">Менеджер</div><div class="fv">' + esc(p.manager) + '</div></div>';
   if (p.deadline)h += '<div class="fg"><div class="fl">Дедлайн</div><div class="fv">' + fmtDate(p.deadline) + '</div></div>';
   if (p.action)  h += '<div class="fg"><div class="fl">Наступна дія</div><div class="fv">' + esc(p.action) + '</div></div>';
@@ -2482,7 +2590,18 @@ function addFileRow(name, url) {
   list.appendChild(row);
 }
 
-var _taskTab = 'active'; // 'active' | 'archive'
+function addPayRow(date, amount, note) {
+  var list = document.getElementById('fp-pays-list');
+  if (!list) return;
+  var row = document.createElement('div');
+  row.className = 'fp-pay-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center';
+  row.innerHTML = '<input class="fi fp-pdate" type="date" value="' + esc(date||'') + '" style="flex:1;padding:5px 8px;font-size:12px">' +
+    '<input class="fi fp-pamt" type="number" placeholder="Сума" value="' + esc(amount||'') + '" style="width:90px;padding:5px 8px;font-size:12px">' +
+    '<input class="fi fp-pnote" placeholder="Напр. 50% аванс" value="' + esc(note||'') + '" style="flex:1;padding:5px 8px;font-size:12px">' +
+    '<button type="button" class="ib d fp-pay-del" style="width:24px;height:24px;flex-shrink:0"><i class="ti ti-x"></i></button>';
+  list.appendChild(row);
+}
 
 function switchTaskTab(tab) {
   _taskTab = tab;
@@ -2655,7 +2774,7 @@ function updateStats() {
   var myProps = proposalsForCurrentMgr(proposals);
   var active = myTasks.filter(function(t) { return !t.done; }).length;
   var od = myTasks.filter(function(t) { return !t.done && t.overdue; }).length;
-  var openKP = myProps.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  var openKP = myProps.filter(function(p) { return p.status !== 'Відвантажено' && p.status !== 'Відмова'; }).length;
   var pipeClients = myClients.filter(function(c) { return gl('pipeStages').indexOf(c.stage) >= 0; }).length;
   document.getElementById('stc').textContent = myClients.length;
   document.getElementById('stk').textContent = openKP;
@@ -2669,7 +2788,7 @@ function updateBadges() {
   var myTasks = tasksForCurrentMgr(tasks);
   var myProps = proposalsForCurrentMgr(proposals);
   document.getElementById('tkb').textContent = myTasks.filter(function(t) { return !t.done; }).length;
-  document.getElementById('kpb').textContent = myProps.filter(function(p) { return p.status !== 'Підписано' && p.status !== 'Відмова'; }).length;
+  document.getElementById('kpb').textContent = myProps.filter(function(p) { return p.status !== 'Відвантажено' && p.status !== 'Відмова'; }).length;
   var cbb = document.getElementById('cbb');
   if (cbb) cbb.textContent = getColdClients().length || '';
 }
@@ -2854,7 +2973,7 @@ function generateReport() {
     if (inclTasks)   cards.push({icon:'ti-check', label:'Виконано завдань', val: stats.doneTasks || 0, bg:'var(--gbg)', clr:'var(--gtxt)'});
     if (inclClients) cards.push({icon:'ti-users', label:'Нових клієнтів',  val: stats.newClients || 0, bg:'var(--bbg)', clr:'var(--btxt)'});
     if (inclHistory) cards.push({icon:'ti-message', label:'Комунікацій',    val: stats.histEntries || 0, bg:'var(--pbg)', clr:'var(--ptxt)'});
-    if (inclProjects) cards.push({icon:'ti-briefcase', label:'Активних проектів', val: proposals.filter(function(p){return p.status!=='Відмова'&&p.status!=='Підписано';}).length, bg:'var(--abg)', clr:'var(--atxt)'});
+    if (inclProjects) cards.push({icon:'ti-briefcase', label:'Активних проектів', val: proposals.filter(function(p){return p.status!=='Відмова'&&p.status!=='Відвантажено';}).length, bg:'var(--abg)', clr:'var(--atxt)'});
     var vh = '';
     cards.forEach(function(c){
       vh += '<div style="background:' + c.bg + ';border-radius:var(--rl);padding:16px 18px">';
@@ -2902,7 +3021,7 @@ function copyReport() {
 function renderAnalytics() {
   document.getElementById('anc').textContent = clients.length;
   document.getElementById('ank').textContent = proposals.length;
-  document.getElementById('ans').textContent = proposals.filter(function(p) { return p.status === 'Підписано'; }).length;
+  document.getElementById('ans').textContent = proposals.filter(function(p) { return p.status === 'Відвантажено'; }).length;
   document.getElementById('and2').textContent = tasks.filter(function(t) { return t.done; }).length;
   var indMap = {}, kpMap = {}, mgrMap = {};
   for (var i = 0; i < clients.length; i++) { var k = clients[i].industry || 'Інше'; indMap[k] = (indMap[k] || 0) + 1; }
@@ -2913,7 +3032,7 @@ function renderAnalytics() {
   var kmax = 1; for (var k in kpMap) if (kpMap[k] > kmax) kmax = kpMap[k];
   var IND_BAR_COLORS = {bl:'#185FA5',gr:'#27500A',pu:'#3C3489',am:'#633806',co:'#712B13',re:'#791F1F',gy:'#444441'};
   var ih = ''; for (var k in indMap) { var ibc = IND_BAR_COLORS[indColor(k)] || '#185FA5'; ih += '<div class="br"><div class="bl2">' + mkTag(k, indColor(k)) + '</div><div class="bo"><div class="bi" style="width:' + Math.round(indMap[k]/imax*100) + '%;background:' + ibc + '"></div></div><div class="bv">' + indMap[k] + '</div></div>'; }
-  var kh = ''; for (var k in kpMap) { var col = k === 'Підписано' ? '#1D9E75' : (k === 'Прострочено' || k === 'Відмова') ? '#E24B4A' : 'var(--blue)'; kh += '<div class="br"><div class="bl2">' + esc(k) + '</div><div class="bo"><div class="bi" style="width:' + Math.round(kpMap[k]/kmax*100) + '%;background:' + col + '"></div></div><div class="bv">' + kpMap[k] + '</div></div>'; }
+  var kh = ''; for (var k in kpMap) { var col = k === 'Відвантажено' ? '#1D9E75' : (k === 'Прострочено' || k === 'Відмова') ? '#E24B4A' : 'var(--blue)'; kh += '<div class="br"><div class="bl2">' + esc(k) + '</div><div class="bo"><div class="bi" style="width:' + Math.round(kpMap[k]/kmax*100) + '%;background:' + col + '"></div></div><div class="bv">' + kpMap[k] + '</div></div>'; }
   var mh = ''; for (var m in mgrMap) mh += '<tr><td><div class="fc">' + mkAv(m) + esc(m) + '</div></td><td>' + mgrMap[m].c + '</td><td>' + mgrMap[m].t + '</td><td>' + mgrMap[m].d + '</td></tr>';
   document.getElementById('chind').innerHTML = ih;
   document.getElementById('chkp').innerHTML = kh;
@@ -3580,6 +3699,8 @@ function openModal(type) {
     h += '<div class="fr"><label class="flab">Нотатки</label><textarea class="fi" id="fpnotes" rows="2" placeholder="Опис проекту..." style="resize:vertical"></textarea></div>';
     h += '<div class="fr"><label class="flab">Файли / посилання</label><div id="fp-files-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>';
     h += '<button type="button" class="btn s" id="fp-add-file" style="font-size:12px"><i class="ti ti-plus"></i> Додати посилання на файл</button></div>';
+    h += '<div class="fr"><label class="flab">Оплати</label><div id="fp-pays-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>';
+    h += '<button type="button" class="btn s" id="fp-add-pay" style="font-size:12px"><i class="ti ti-plus"></i> Додати оплату</button></div>';
   } else if (type === 'deal') {
     var copts3 = '<option value="">— оберіть клієнта —</option>';
     for (var i = 0; i < clients.length; i++) {
@@ -3601,6 +3722,8 @@ function openModal(type) {
   setTimeout(function() {
     var btn = document.getElementById('fp-add-file');
     if (btn) btn.addEventListener('click', function() { addFileRow('', ''); });
+    var pbtn = document.getElementById('fp-add-pay');
+    if (pbtn) pbtn.addEventListener('click', function() { addPayRow('', '', ''); });
   }, 80);
   // fp-file-del handled inline
 }
@@ -3793,17 +3916,27 @@ function saveModal() {
       if (furl) filesArr.push({name: fname || furl, url: furl});
     }
     var filesJson = JSON.stringify(filesArr);
-    var row = [client, amt, projectNum, '', ddl, status, action, manager, notes, filesJson];
+    // Collect payments
+    var payRows = document.querySelectorAll('#fp-pays-list .fp-pay-row');
+    var paysArr = [];
+    for (var qi = 0; qi < payRows.length; qi++) {
+      var pdate = payRows[qi].querySelector('.fp-pdate') ? payRows[qi].querySelector('.fp-pdate').value : '';
+      var pamt  = payRows[qi].querySelector('.fp-pamt')  ? payRows[qi].querySelector('.fp-pamt').value.trim()  : '';
+      var pnote = payRows[qi].querySelector('.fp-pnote') ? payRows[qi].querySelector('.fp-pnote').value.trim() : '';
+      if (pdate || pamt) paysArr.push({date: pdate, amount: pamt, note: pnote});
+    }
+    var paysJson = JSON.stringify(paysArr);
+    var row = [client, amt, projectNum, '', ddl, status, action, manager, notes, filesJson, paysJson];
     if (curModal === 'proposal_edit' && curEditId) {
       var p = proposals.find(function(x){ return String(x.id) === String(curEditId); });
       if (p) {
         p.projectNum=projectNum; p.client=client; p.amount=amt; p.deadline=ddl;
-        p.status=status; p.action=action; p.manager=manager; p.notes=notes; p.files=filesJson;
-        apiPost({sheet:'proposals', action:'update', id:p.id, row:[p.id, p.client, p.amount, p.projectNum, '', p.deadline, p.status, p.action, p.manager||'', p.notes||'', p.files||'[]']});
+        p.status=status; p.action=action; p.manager=manager; p.notes=notes; p.files=filesJson; p.payments=paysJson;
+        apiPost({sheet:'proposals', action:'update', id:p.id, row:[p.id, p.client, p.amount, p.projectNum, '', p.deadline, p.status, p.action, p.manager||'', p.notes||'', p.files||'[]', p.payments||'[]']});
       }
     } else {
       var id = uid();
-      proposals.push({id:id, projectNum:projectNum, client:client, amount:amt, ver:projectNum, deadline:ddl, status:status, action:action, manager:manager, notes:notes, files:filesJson});
+      proposals.push({id:id, projectNum:projectNum, client:client, amount:amt, ver:projectNum, deadline:ddl, status:status, action:action, manager:manager, notes:notes, files:filesJson, payments:paysJson});
       apiPost({sheet:'proposals', action:'add', row:[id].concat(row)});
       addAct('Новий проект — ' + esc(projectNum) + ' ' + esc(client), '#185FA5');
     }
