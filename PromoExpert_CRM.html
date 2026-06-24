@@ -1074,7 +1074,22 @@ function todayISO() {
   return d.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
 }
 
-function fmtMoney(n) { return n ? '₴' + Number(n).toLocaleString('uk-UA') : '—'; }
+// Безпечний парсинг числа з рядка (прибирає пробіли, кому → крапка)
+function toNum(v) {
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
+  if (!v) return 0;
+  var n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function fmtMoney(n) {
+  if (n === 0 || n === '0') return '₴0';
+  if (!n) return '—';
+  // Прибираємо пробіли/розділювачі, кому замінюємо на крапку
+  var num = (typeof n === 'number') ? n : parseFloat(String(n).replace(/\s/g, '').replace(',', '.'));
+  if (isNaN(num)) return '—';
+  return '₴' + num.toLocaleString('uk-UA');
+}
 
 function mkTag(txt, cls) { return '<span class="tag ' + (cls || 'gy') + '">' + esc(txt) + '</span>'; }
 
@@ -1516,28 +1531,37 @@ function clearSearch() {
   if (res) res.style.display = 'none';
 }
 
+// Повертає {id, name} компанії для завдання — відновлює ім'я по clientId,
+// якщо clientName порожній (або навпаки), щоб компанія завжди показувалась
+function taskClient(t) {
+  var name = t.clientName || '';
+  var id = t.clientId || '';
+  if (id) {
+    var cl = clients.find(function(x) { return String(x.id) === String(id); });
+    if (cl) name = cl.name;
+  }
+  if (!id && name) {
+    var cl2 = clients.find(function(x) { return x.name === name; });
+    if (cl2) id = cl2.id;
+  }
+  return {id: id, name: name};
+}
+
 function mkTaskRow(t) {
   var h = '';
   h += '<div class="task" style="cursor:default;padding:9px 14px">';
   h += '<div class="chk' + (t.done ? ' on' : '') + '" data-action="toggle-task" data-id="' + esc(t.id) + '">' + (t.done ? '<i class="ti ti-check" style="font-size:10px"></i>' : '') + '</div>';
   h += '<div class="tb" style="padding-right:50px">';
   h += '<div class="tt' + (t.done ? ' on' : '') + '" style="font-size:12px">' + esc(t.title || '');
-  var tClientName = t.clientName || '';
-  var tClientId = t.clientId || '';
-  if (tClientId) {
-    var cl2 = clients.find(function(x) { return String(x.id) === String(tClientId); });
-    if (cl2) tClientName = cl2.name;
-  }
-  if (!tClientId && tClientName) {
-    var cl3 = clients.find(function(x) { return x.name === tClientName; });
-    if (cl3) tClientId = cl3.id;
-  }
+  var tc = taskClient(t);
+  var tClientName = tc.name;
+  var tClientId = tc.id;
   if (tClientName) {
     h += ' <span data-action="open-client" data-id="' + esc(tClientId) + '" style="font-size:10px;color:var(--blue);cursor:pointer;opacity:.85">· ' + esc(tClientName) + '</span>';
   }
   h += '</div>';
   var dueFmt = fmtDate(t.due) || t.due || '—';
-  h += '<div class="tm" style="font-size:10px"><span class="' + (t.overdue && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ' + esc(dueFmt) + '</span><span>' + esc(t.manager || '') + '</span></div>';
+  h += '<div class="tm" style="font-size:10px"><span class="' + (isTaskOverdue(t.due) && !t.done ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ' + esc(dueFmt) + '</span><span>' + esc(t.manager || '') + '</span></div>';
   h += '</div>';
   h += '<div style="display:flex;gap:2px;position:absolute;right:10px;top:50%;transform:translateY(-50%)">';
   h += '<button class="ib" style="width:20px;height:20px;font-size:11px;opacity:0" data-action="edit-task" data-id="' + esc(t.id) + '" title="Редагувати"><i class="ti ti-edit"></i></button>';
@@ -1578,7 +1602,13 @@ function renderDashTasks() {
   var active = myTasks.filter(function(t) { return !t.done; });
   var overdue = active.filter(function(t) { return isTaskOverdue(t.due); });
   var today   = active.filter(function(t) { return !isTaskOverdue(t.due) && isTaskToday(t.due); });
-  var future  = active.filter(function(t) { return !isTaskOverdue(t.due) && !isTaskToday(t.due) && t.due !== 'Без дедлайну'; });
+  // Майбутні — тільки на 7 днів вперед
+  var weekAhead = new Date(); weekAhead.setHours(0,0,0,0); weekAhead.setDate(weekAhead.getDate()+8);
+  var future  = active.filter(function(t) {
+    if (isTaskOverdue(t.due) || isTaskToday(t.due) || t.due === 'Без дедлайну') return false;
+    var d = parseTaskDate(t.due);
+    return d && d < weekAhead;
+  });
 
   var odCnt = document.getElementById('dash-od-cnt');
   var tdCnt = document.getElementById('dash-today-cnt');
@@ -2516,8 +2546,8 @@ function openProject(id) {
   try { pays = JSON.parse(p.payments || '[]'); } catch(e) {}
   if (pays.length || p.amount) {
     var totalPaid = 0;
-    for (var pi = 0; pi < pays.length; pi++) totalPaid += (parseFloat(pays[pi].amount) || 0);
-    var totalAmt = parseFloat(p.amount) || 0;
+    for (var pi = 0; pi < pays.length; pi++) totalPaid += toNum(pays[pi].amount);
+    var totalAmt = toNum(p.amount);
     var remain = totalAmt - totalPaid;
     h += '<div class="sl">Оплати</div>';
     if (pays.length) {
@@ -2661,7 +2691,8 @@ function renderTasks() {
         h += '<div class="chk" data-action="toggle-task" data-id="' + esc(t.id) + '"></div>';
         h += '<div class="tb">';
         h += '<div class="tt">' + esc(t.title || '');
-        if (t.clientName) h += ' <span style="font-size:11px;color:var(--blue)">· ' + esc(t.clientName) + '</span>';
+        var tcA = taskClient(t);
+        if (tcA.name) h += ' <span data-action="open-client" data-id="' + esc(tcA.id) + '" style="font-size:11px;color:var(--blue);cursor:pointer">· ' + esc(tcA.name) + '</span>';
         h += '</div>';
         var od = isTaskOverdue(t.due);
         h += '<div class="tm"><span class="' + (od ? 'od' : '') + '"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> ' + esc(fmtDate(t.due) || t.due || '—') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
@@ -2693,7 +2724,8 @@ function renderTasks() {
         h += '<div class="chk on" data-action="toggle-task" data-id="' + esc(t.id) + '" title="Повернути в активні"><i class="ti ti-check" style="font-size:10px"></i></div>';
         h += '<div class="tb">';
         h += '<div class="tt on">' + esc(t.title || '');
-        if (t.clientName) h += ' <span style="font-size:11px;color:var(--blue)">· ' + esc(t.clientName) + '</span>';
+        var tcAr = taskClient(t);
+        if (tcAr.name) h += ' <span style="font-size:11px;color:var(--blue)">· ' + esc(tcAr.name) + '</span>';
         h += '</div>';
         h += '<div class="tm"><span><i class="ti ti-check" style="font-size:11px;vertical-align:-1px;color:var(--blue)"></i> Виконано' + (t.doneDate ? ' ' + esc(t.doneDate) : '') + '</span><span>' + esc(t.manager || '—') + '</span></div>';
         h += '</div>';
@@ -2786,7 +2818,7 @@ function updateStats() {
   var myTasks = tasksForCurrentMgr(tasks);
   var myProps = proposalsForCurrentMgr(proposals);
   var active = myTasks.filter(function(t) { return !t.done; }).length;
-  var od = myTasks.filter(function(t) { return !t.done && t.overdue; }).length;
+  var od = myTasks.filter(function(t) { return !t.done && isTaskOverdue(t.due); }).length;
   var openKP = myProps.filter(function(p) { return p.status !== 'Відвантажено' && p.status !== 'Відмова'; }).length;
   var pipeClients = myClients.filter(function(c) { return gl('pipeStages').indexOf(c.stage) >= 0; }).length;
   document.getElementById('stc').textContent = myClients.length;
@@ -2874,6 +2906,14 @@ function generateReport() {
   var fromStr = range.from.toLocaleDateString('uk-UA', {day:'numeric', month:'long'});
   var toStr   = range.to.toLocaleDateString('uk-UA',   {day:'numeric', month:'long', year:'numeric'});
 
+  // Звіт — індивідуальний по поточному менеджеру (незалежно від режиму "Всі")
+  function mine(item) {
+    return !item.manager || item.manager === currentManager || item.manager === 'Не призначено';
+  }
+  var rptTasks     = tasks.filter(mine);
+  var rptProposals = proposals.filter(mine);
+  var rptClients   = clients.filter(mine);
+
   var lines = [];
   var stats = {};
 
@@ -2883,7 +2923,7 @@ function generateReport() {
 
   // Виконані завдання
   if (inclTasks) {
-    var doneTasks = tasks.filter(function(t){
+    var doneTasks = rptTasks.filter(function(t){
       return t.done && inRange(t.doneDate || t.due, range);
     });
     stats.doneTasks = doneTasks.length;
@@ -2903,7 +2943,7 @@ function generateReport() {
 
   // Нові клієнти
   if (inclClients) {
-    var newClients = clients.filter(function(c){ return inRange(c.last, range); });
+    var newClients = rptClients.filter(function(c){ return inRange(c.last, range); });
     stats.newClients = newClients.length;
     lines.push('👤 НОВІ КЛІЄНТИ (' + newClients.length + ')');
     if (newClients.length) {
@@ -2921,7 +2961,7 @@ function generateReport() {
 
   // Активність по проектах
   if (inclProjects) {
-    var activeProjects = proposals.filter(function(p){
+    var activeProjects = rptProposals.filter(function(p){
       return p.status !== 'Відмова';
     });
     lines.push('📁 АКТИВНІ ПРОЕКТИ (' + activeProjects.length + ')');
@@ -2939,7 +2979,7 @@ function generateReport() {
   // Записи в історії
   if (inclHistory) {
     var histEntries = [];
-    clients.forEach(function(c){
+    rptClients.forEach(function(c){
       var hist = [];
       try { hist = JSON.parse(c.history || '[]'); } catch(e){}
       hist.forEach(function(h){
@@ -2962,7 +3002,7 @@ function generateReport() {
 
   // Прострочені
   if (inclOverdue) {
-    var overdue = tasks.filter(function(t){ return !t.done && isTaskOverdue(t.due); });
+    var overdue = rptTasks.filter(function(t){ return !t.done && isTaskOverdue(t.due); });
     lines.push('⚠️ ПРОСТРОЧЕНІ ЗАВДАННЯ (' + overdue.length + ')');
     if (overdue.length) {
       overdue.forEach(function(t){
@@ -2986,7 +3026,7 @@ function generateReport() {
     if (inclTasks)   cards.push({icon:'ti-check', label:'Виконано завдань', val: stats.doneTasks || 0, bg:'var(--gbg)', clr:'var(--gtxt)'});
     if (inclClients) cards.push({icon:'ti-users', label:'Нових клієнтів',  val: stats.newClients || 0, bg:'var(--bbg)', clr:'var(--btxt)'});
     if (inclHistory) cards.push({icon:'ti-message', label:'Комунікацій',    val: stats.histEntries || 0, bg:'var(--pbg)', clr:'var(--ptxt)'});
-    if (inclProjects) cards.push({icon:'ti-briefcase', label:'Активних проектів', val: proposals.filter(function(p){return p.status!=='Відмова'&&p.status!=='Відвантажено';}).length, bg:'var(--abg)', clr:'var(--atxt)'});
+    if (inclProjects) cards.push({icon:'ti-briefcase', label:'Активних проектів', val: rptProposals.filter(function(p){return p.status!=='Відмова'&&p.status!=='Відвантажено';}).length, bg:'var(--abg)', clr:'var(--atxt)'});
     var vh = '';
     cards.forEach(function(c){
       vh += '<div style="background:' + c.bg + ';border-radius:var(--rl);padding:16px 18px">';
