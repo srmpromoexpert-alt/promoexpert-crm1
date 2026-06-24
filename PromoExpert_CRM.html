@@ -1107,6 +1107,16 @@ function parseListVals(val) {
 
 // ── EVENT DELEGATION ──
 document.addEventListener('click', function(e) {
+  if (e.target.closest('.fp-pay-del')) {
+    var prow0 = e.target.closest('.fp-pay-row');
+    if (prow0) prow0.remove();
+    return;
+  }
+  if (e.target.closest('.fp-file-del')) {
+    var frow0 = e.target.closest('.fp-file-row');
+    if (frow0) frow0.remove();
+    return;
+  }
   var el = e.target.closest('[data-action]');
   if (!el) return;
   var a = el.getAttribute('data-action');
@@ -1179,14 +1189,6 @@ document.addEventListener('click', function(e) {
     else inp && inp.focus();
   }
   if (a === 'open-pipe')     { openClient(id); }
-  if (e.target.closest('.fp-file-del')) {
-    var row = e.target.closest('.fp-file-row');
-    if (row) row.remove();
-  }
-  if (e.target.closest('.fp-pay-del')) {
-    var prow = e.target.closest('.fp-pay-row');
-    if (prow) prow.remove();
-  }
 });
 
 document.addEventListener('click', function(e) {
@@ -1319,7 +1321,11 @@ function buildClientRow(c) {
   ];
 }
 
+var _syncing = false;
 function syncAll() {
+  // Замок: не запускаємо нову синхронізацію поверх незавершеної
+  if (_syncing) return;
+  _syncing = true;
   ss('spin', 'Синхронізація...');
   Promise.all([apiGet('clients'), apiGet('proposals'), apiGet('tasks')]).then(function(res) {
     // Колонки clients: 0=id,1=name,2=contact,3=role,4=phones,5=emails,6=linkedin,7=industry,8=source,9=stage,10=last,11=notes,12=history,13=manager,14=brands,15=tags
@@ -1380,14 +1386,21 @@ function syncAll() {
         return t;
       });
     } catch(e) { console.error('tasks parse error', e); tasks = []; }
-    renderAll();
+    // Не перемальовуємо весь UI, якщо відкрита картка або модалка —
+    // інакше скидається фокус і відбувається фриз. Дані вже оновлені в пам'яті.
+    var drawerOpen = document.getElementById('drawer').classList.contains('on');
+    var modalOpen  = document.getElementById('movl').classList.contains('on');
+    if (!drawerOpen && !modalOpen) {
+      renderAll();
+    }
     var total = clients.length + proposals.length + tasks.length;
     if (total === 0) {
       ss('warn', 'Дані не завантажились');
     } else {
       ss('ok', 'Синхронізовано · ' + clients.length + ' контактів');
     }
-  }).catch(function(e) { ss('err', 'Помилка з\'єднання'); console.error('syncAll error:', e); });
+    _syncing = false;
+  }).catch(function(e) { ss('err', 'Помилка з\'єднання'); console.error('syncAll error:', e); _syncing = false; });
 }
 
 // ── DRAG AND DROP ──
@@ -4019,10 +4032,16 @@ loadSettings(function() {
   syncAll();
 });
 
-// Автосинхронізація кожні 2 хвилини
+// Автосинхронізація кожні 3 хвилини (тільки коли вкладка активна)
 setInterval(function() {
+  if (document.hidden) return;       // не синхронізуємо у фоні
   syncAll();
-}, 2 * 60 * 1000);
+}, 3 * 60 * 1000);
+
+// Догнати дані, коли користувач повертається на вкладку
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) syncAll();
+});
 
 // Відновлюємо останній розділ після перезавантаження
 try {
