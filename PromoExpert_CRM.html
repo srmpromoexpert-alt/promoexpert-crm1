@@ -44,6 +44,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sdot.ok{background:#1D9E75}.sdot.err{background:#E24B4A}
 .sdot.spin{background:#EF9F27;animation:bl 1s infinite}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+/* toast (undo) */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:#fff;padding:11px 14px 11px 16px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;font-size:13px;z-index:2000;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:92vw}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#toast .tundo{background:none;border:none;color:#7db3ff;font-weight:600;font-size:13px;cursor:pointer;padding:2px 4px;font-family:inherit;white-space:nowrap}
+#toast .tundo:hover{text-decoration:underline}
+#toast .tx{flex:1;min-width:0}
+.sdot.unsaved{background:#EF9F27;animation:bl 1s infinite}
 /* main */
 .main{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
 .topbar{background:var(--bg2);border-bottom:.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -79,6 +86,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{padding:9px 14px;text-align:left;color:var(--text2);font-weight:500;border-bottom:.5px solid var(--bd);font-size:12px;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--text)}
+th.sortable .sarr{font-size:10px;opacity:.35;margin-left:3px}
+th.sortable.sorted .sarr{opacity:1;color:var(--blue)}
 td{padding:9px 14px;border-bottom:.5px solid var(--bd);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg3)}
@@ -293,7 +304,7 @@ tr:hover .ra{opacity:1}
     <!-- ГЛОБАЛЬНИЙ ПОШУК -->
     <div style="padding:6px 10px;border-bottom:.5px solid var(--bd)">
       <div style="position:relative">
-        <input id="gsrch" placeholder="Пошук по всій CRM..." oninput="globalSearch()" style="padding:7px 12px 7px 30px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--bg2);color:var(--text);outline:none;width:100%;box-sizing:border-box">
+        <input id="gsrch" placeholder="Пошук по CRM   (Ctrl+K)" oninput="debouncedSearch()" style="padding:7px 12px 7px 30px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--bg2);color:var(--text);outline:none;width:100%;box-sizing:border-box">
         <i class="ti ti-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px"></i>
       </div>
       <div id="gsrch-results" style="display:none;position:absolute;left:0;right:0;background:var(--bg2);border:.5px solid var(--bd2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;max-height:400px;overflow-y:auto;margin-top:4px"></div>
@@ -336,7 +347,7 @@ tr:hover .ra{opacity:1}
         <span class="ttl">Дашборд</span>
         <div style="display:none;align-items:center;gap:8px" class="topbar-search">
           <div style="position:relative">
-            <input placeholder="Пошук..." oninput="var g=document.getElementById('gsrch');if(g)g.value=this.value;globalSearch();" style="padding:6px 10px 6px 28px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;width:160px">
+            <input placeholder="Пошук..." oninput="var g=document.getElementById('gsrch');if(g)g.value=this.value;debouncedSearch();" style="padding:6px 10px 6px 28px;border:.5px solid var(--bd2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);outline:none;width:160px">
             <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:12px"></i>
           </div>
         </div>
@@ -466,7 +477,7 @@ tr:hover .ra{opacity:1}
           </div>
           <div class="tw">
             <table>
-              <thead><tr><th>Компанія</th><th>Контакт</th><th>Галузь</th><th>Теги</th><th>Джерело</th><th>Статус</th><th>Дата</th><th style="width:70px"></th></tr></thead>
+              <thead><tr><th class="sortable" data-sort="clients" data-key="name">Компанія<span class="sarr">↕</span></th><th class="sortable" data-sort="clients" data-key="contact">Контакт<span class="sarr">↕</span></th><th class="sortable" data-sort="clients" data-key="industry">Галузь<span class="sarr">↕</span></th><th>Теги</th><th class="sortable" data-sort="clients" data-key="source">Джерело<span class="sarr">↕</span></th><th class="sortable" data-sort="clients" data-key="stage">Статус<span class="sarr">↕</span></th><th class="sortable" data-sort="clients" data-key="last">Дата<span class="sarr">↕</span></th><th style="width:70px"></th></tr></thead>
               <tbody id="ctbody"></tbody>
             </table>
           </div>
@@ -531,7 +542,7 @@ tr:hover .ra{opacity:1}
           </div>
           <div class="tw">
             <table>
-              <thead><tr><th style="width:110px">№ Проекту</th><th>Компанія</th><th>Сума</th><th>Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Наступна дія</th><th style="width:60px">Файли</th><th style="width:50px"></th></tr></thead>
+              <thead><tr><th class="sortable" data-sort="props" data-key="projectNum" style="width:110px">№ Проекту<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="client">Компанія<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="amount">Сума<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="manager">Менеджер<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="deadline">Дедлайн<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="status">Статус<span class="sarr">↕</span></th><th class="sortable" data-sort="props" data-key="action">Наступна дія<span class="sarr">↕</span></th><th style="width:60px">Файли</th><th style="width:50px"></th></tr></thead>
               <tbody id="ptbody"></tbody>
             </table>
           </div>
@@ -742,10 +753,17 @@ tr:hover .ra{opacity:1}
   </div>
 </div>
 
+<!-- TOAST (Undo) -->
+<div id="toast">
+  <span class="tx" id="toast-text"></span>
+  <button class="tundo" id="toast-undo">Відмінити</button>
+</div>
+
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbys1P4Ulkg8nRVjPP-0x2Twm3eP_G9ODNP4dJCznqyU0u7kDvzP8HAl4j7gdZqen1TM/exec';
 var clients = [], proposals = [], tasks = [], acts = [];
 var curModal = '', curEditId = null, cfmCb = null;
+var _pendingWrites = 0, _lastWriteTime = 0;
 
 // ── MANAGER / ROLE SYSTEM ──
 // Перший менеджер в списку MANAGERS вважається адміном
@@ -1293,7 +1311,26 @@ function apiGet(sheet) {
 }
 
 function apiPost(payload) {
-  fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) }).catch(function() {});
+  _pendingWrites++;
+  _lastWriteTime = Date.now();
+  updateUnsavedDot();
+  fetch(API, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) })
+    .then(function(){ setTimeout(function(){ _pendingWrites = Math.max(0, _pendingWrites - 1); updateUnsavedDot(); }, 1500); })
+    .catch(function(){ /* збій — лишаємо позначку, дані не втрачаються */ });
+}
+
+function updateUnsavedDot() {
+  var dot = document.getElementById('sdot');
+  if (!dot) return;
+  if (_pendingWrites > 0 && !dot.classList.contains('spin')) {
+    if (!dot.classList.contains('unsaved')) {
+      dot.classList.add('unsaved');
+      var st = document.getElementById('stxt');
+      if (st) st.textContent = 'Зберігаємо зміни...';
+    }
+  } else if (_pendingWrites <= 0) {
+    dot.classList.remove('unsaved');
+  }
 }
 
 // Оновлює тільки конкретні поля — не перезаписує весь рядок
@@ -1440,6 +1477,8 @@ function syncAll() {
       ss('warn', 'Дані не завантажились');
     } else {
       ss('ok', 'Синхронізовано · ' + clients.length + ' контактів');
+      if (Date.now() - _lastWriteTime > 2000) { _pendingWrites = 0; }
+      updateUnsavedDot();
     }
     _syncing = false;
   }).catch(function(e) { ss('err', 'Помилка з\'єднання'); console.error('syncAll error:', e); _syncing = false; });
@@ -1501,6 +1540,11 @@ function initDragDrop() {
 }
 
 // ── GLOBAL SEARCH ──
+var _searchTimer = null;
+function debouncedSearch() {
+  if (_searchTimer) clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(globalSearch, 220);
+}
 function globalSearch() {
   var q = (document.getElementById('gsrch') || {value:''}).value.trim().toLowerCase();
   var res = document.getElementById('gsrch-results');
@@ -1690,6 +1734,7 @@ function renderAll() {
   populateFilters();
   restoreFilterState();
   filterClients();
+  updateSortArrows();
 }
 
 function renderRecentClients() {
@@ -1742,8 +1787,82 @@ function renderDashKP() {
 }
 
 // ── CLIENTS ──
+// ── СОРТУВАННЯ ТАБЛИЦЬ ПО КЛІКУ НА ЗАГОЛОВОК ──
+// Стан сортування для кожної таблиці: {key, dir} (dir: 1 = за зростанням, -1 = за спаданням)
+var _tableSort = { clients: null, props: null };
+
+// Які ключі трактуємо як числа / дати (інакше — текст)
+var _numKeys = { amount: true };
+var _dateKeys = { last: true, deadline: true };
+
+function _sortVal(obj, key) {
+  var v = obj[key];
+  if (_numKeys[key]) return toNum(v);
+  if (_dateKeys[key]) return parseMyDate(v);
+  return String(v == null ? '' : v).toLowerCase();
+}
+
+// Сортує масив за поточним станом таблиці (table = 'clients' | 'props')
+function applyTableSort(arr, table) {
+  var st = _tableSort[table];
+  if (!st || !st.key) return arr;
+  var key = st.key, dir = st.dir;
+  var copy = arr.slice();
+  copy.sort(function(a, b) {
+    var va = _sortVal(a, key), vb = _sortVal(b, key);
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+  return copy;
+}
+
+// Оновлює стрілки ↑/↓ у заголовках
+function updateSortArrows() {
+  var ths = document.querySelectorAll('th.sortable');
+  for (var i = 0; i < ths.length; i++) {
+    var th = ths[i];
+    var table = th.getAttribute('data-sort');
+    var key = th.getAttribute('data-key');
+    var arr = th.querySelector('.sarr');
+    var st = _tableSort[table];
+    if (st && st.key === key) {
+      th.classList.add('sorted');
+      if (arr) arr.textContent = st.dir === 1 ? '↑' : '↓';
+    } else {
+      th.classList.remove('sorted');
+      if (arr) arr.textContent = '↕';
+    }
+  }
+}
+
+// Клік по заголовку: перший клік — за зростанням, другий — за спаданням, третій — скидання
+function onSortHeaderClick(table, key) {
+  var st = _tableSort[table];
+  if (!st || st.key !== key) {
+    _tableSort[table] = { key: key, dir: 1 };
+  } else if (st.dir === 1) {
+    _tableSort[table] = { key: key, dir: -1 };
+  } else {
+    _tableSort[table] = null; // скидаємо до звичайного порядку
+  }
+  updateSortArrows();
+  if (table === 'clients') filterClients();
+  else if (table === 'props') renderProposals();
+}
+
+// Делегований обробник кліків по заголовках
+document.addEventListener('click', function(e) {
+  var th = e.target.closest ? e.target.closest('th.sortable') : null;
+  if (!th) return;
+  onSortHeaderClick(th.getAttribute('data-sort'), th.getAttribute('data-key'));
+});
+
 function renderClients(list) {
   list = clientsForCurrentMgr(list || clients);
+  // Якщо активне сортування по колонці — застосовуємо його (для прямих викликів, напр. після видалення)
+  if (_tableSort.clients && _tableSort.clients.key) list = applyTableSort(list, 'clients');
   var tbody = document.getElementById('ctbody');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Контактів немає</td></tr>';
@@ -1825,6 +1944,8 @@ function filterClients() {
   else if (sort === 'old') list.sort(function(a,b) { return parseMyDate(a.last) - parseMyDate(b.last); });
   else if (sort === 'az') list.sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); });
   else if (sort === 'za') list.sort(function(a,b) { return (b.name||'').localeCompare(a.name||''); });
+  // Якщо активне сортування по заголовку колонки — воно має пріоритет над випадаючим списком
+  if (_tableSort.clients && _tableSort.clients.key) list = applyTableSort(list, 'clients');
   renderClients(list);
 }
 
@@ -2066,28 +2187,30 @@ var COLD_STAGE = 'Холодна база';
 function sendToCold(id) {
   var c = clients.find(function(x) { return String(x.id) === String(id); });
   if (!c) return;
-  if (!confirm('Перенести "' + c.name + '" в холодну базу?\nКлієнт буде видимий обом менеджерам.')) return;
-  c._prevStage = c.stage; // зберігаємо попередній етап
-  c.stage = COLD_STAGE;
-  c.last = new Date().toLocaleDateString('uk-UA');
-  apiPatch('clients', c.id, {stage: COLD_STAGE, last: c.last, _prevStage: c._prevStage || ''});
-  closeDrawer();
-  renderAll();
-  addAct('🧊 ' + esc(c.name) + ' → Холодна база', '#888');
+  showCfm('Перенести в холодну базу?', '«' + c.name + '» буде видимий обом менеджерам.', function() {
+    c._prevStage = c.stage;
+    c.stage = COLD_STAGE;
+    c.last = new Date().toLocaleDateString('uk-UA');
+    apiPatch('clients', c.id, {stage: COLD_STAGE, last: c.last, _prevStage: c._prevStage || ''});
+    closeDrawer();
+    renderAll();
+    addAct('🧊 ' + esc(c.name) + ' → Холодна база', '#888');
+  }, {okText: 'Перенести', danger: false});
 }
 
 function restoreFromCold(id) {
   var c = clients.find(function(x) { return String(x.id) === String(id); });
   if (!c) return;
   var prevStage = c._prevStage || 'Новий лід';
-  if (!confirm('Повернути "' + c.name + '" з холодної бази?\nЕтап буде: ' + prevStage)) return;
-  c.stage = prevStage;
-  c._prevStage = '';
-  c.last = new Date().toLocaleDateString('uk-UA');
-  apiPatch('clients', c.id, {stage: prevStage, last: c.last, _prevStage: ''});
-  closeDrawer();
-  renderAll();
-  addAct('↩️ ' + esc(c.name) + ' повернуто з холодної бази', '#185FA5');
+  showCfm('Повернути з холодної бази?', '«' + c.name + '» отримає етап: ' + prevStage, function() {
+    c.stage = prevStage;
+    c._prevStage = '';
+    c.last = new Date().toLocaleDateString('uk-UA');
+    apiPatch('clients', c.id, {stage: prevStage, last: c.last, _prevStage: ''});
+    closeDrawer();
+    renderAll();
+    addAct('↩️ ' + esc(c.name) + ' повернуто з холодної бази', '#185FA5');
+  }, {okText: 'Повернути', danger: false});
 }
 
 function isColdStage(s) {
@@ -2196,7 +2319,9 @@ function openQuickTask(clientId) {
 }
 
 function delHistItem(clientId, idx) {
-  if (!confirm('Видалити цей запис з історії?')) return;
+  showCfm('Видалити запис історії?', 'Цей запис буде видалено.', function() { _delHistItem(clientId, idx); });
+}
+function _delHistItem(clientId, idx) {
   var c = clients.find(function(x) { return String(x.id) === String(clientId); });
   if (!c) return;
   var hist = [];
@@ -2260,13 +2385,21 @@ function editClient(id) {
 }
 
 function deleteClient(id) {
-  var c = clients.find(function(x) { return String(x.id) === String(id); });
-  if (!c) return;
+  var idx = clients.findIndex(function(x) { return String(x.id) === String(id); });
+  if (idx < 0) return;
+  var c = clients[idx];
   showCfm('Видалити "' + c.name + '"?', 'Картку буде видалено з бази.', function() {
-    clients = clients.filter(function(x) { return String(x.id) !== String(id); });
-    renderClients(); updateStats(); closeDrawer();
+    var removed = clients[idx];
+    clients.splice(idx, 1);
+    renderClients(); updateStats(); renderCompanies(); closeDrawer();
     apiPost({sheet:'clients', action:'delete', id:id});
     addAct('Видалено: ' + esc(c.name), '#E24B4A');
+    showToast('Видалено «' + c.name + '»', function() {
+      clients.splice(Math.min(idx, clients.length), 0, removed);
+      apiPost({sheet:'clients', action:'add', row:buildClientRow(removed)});
+      renderClients(); updateStats(); renderCompanies();
+      addAct('Відновлено: ' + esc(removed.name), '#185FA5');
+    });
   });
 }
 
@@ -2467,6 +2600,8 @@ function renderProposals() {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text2)">' + (_propTab === 'archive' ? 'В архіві ще немає проектів' : 'Проектів ще немає') + '</td></tr>';
     return;
   }
+  // Сортування по колонці, якщо активне
+  if (_tableSort.props && _tableSort.props.key) myProposals = applyTableSort(myProposals, 'props');
   var h = '';
   for (var i = 0; i < myProposals.length; i++) {
     var p = myProposals[i];
@@ -2501,10 +2636,18 @@ function renderProposals() {
 }
 
 function deleteProp(id) {
+  var idx = proposals.findIndex(function(p) { return String(p.id) === String(id); });
+  if (idx < 0) return;
+  var removed = proposals[idx];
   showCfm('Видалити проект?', 'Проект буде видалено.', function() {
-    proposals = proposals.filter(function(p) { return String(p.id) !== String(id); });
+    proposals.splice(idx, 1);
     renderProposals(); updateStats(); renderDashKP();
     apiPost({sheet:'proposals', action:'delete', id:id});
+    showToast('Проект видалено', function() {
+      proposals.splice(Math.min(idx, proposals.length), 0, removed);
+      apiPost({sheet:'proposals', action:'add', row:[removed.id, removed.client, removed.amount, removed.projectNum, removed.ver||'', removed.deadline, removed.status, removed.action, removed.manager||'', removed.notes||'', removed.files||'[]', removed.payments||'[]']});
+      renderProposals(); updateStats(); renderDashKP();
+    });
   });
 }
 
@@ -2700,7 +2843,9 @@ function switchTaskTab(tab) {
 }
 
 function clearArchive() {
-  if (!confirm('Видалити всі виконані завдання з архіву? Відновити буде неможливо.')) return;
+  showCfm('Очистити архів?', 'Усі виконані завдання буде видалено без можливості відновлення.', function() { _clearArchive(); });
+}
+function _clearArchive() {
   var done = tasks.filter(function(t){ return t.done; });
   done.forEach(function(t){
     apiPost({sheet:'tasks', action:'delete', id:t.id});
@@ -2834,10 +2979,18 @@ function editTask(id) {
 }
 
 function deleteTask(id) {
+  var idx = tasks.findIndex(function(t) { return String(t.id) === String(id); });
+  if (idx < 0) return;
+  var removed = tasks[idx];
   showCfm('Видалити завдання?', 'Завдання буде видалено.', function() {
-    tasks = tasks.filter(function(t) { return String(t.id) !== String(id); });
+    tasks.splice(idx, 1);
     renderTasks(); updateStats(); renderDashTasks();
     apiPost({sheet:'tasks', action:'delete', id:id});
+    showToast('Завдання видалено', function() {
+      tasks.splice(Math.min(idx, tasks.length), 0, removed);
+      apiPost({sheet:'tasks', action:'add', row:[removed.id, removed.title, removed.due, removed.manager, removed.done||false, removed.overdue||false, removed.clientId||'', removed.clientName||'', removed.doneDate||'']});
+      renderTasks(); updateStats(); renderDashTasks();
+    });
   });
 }
 
@@ -3239,11 +3392,12 @@ function renderSettings() {
 }
 
 function resetColors() {
-  if (!confirm('Скинути всі кольори до стандартних?')) return;
-  USER_COLORS = {};
-  saveColors();
-  renderAll();
-  renderSettings();
+  showCfm('Скинути кольори?', 'Усі кольори повернуться до стандартних.', function() {
+    USER_COLORS = {};
+    saveColors();
+    renderAll();
+    renderSettings();
+  }, {okText: 'Скинути', danger: false});
 }
 
 function addSItem(key) {
@@ -3257,10 +3411,11 @@ function addSItem(key) {
 }
 
 function rmSItem(key, i) {
-  if (!confirm('Видалити?')) return;
-  if (!LISTS[key]) LISTS[key] = gl(key).slice();
-  LISTS[key].splice(i, 1);
-  saveLists(); renderSettings();
+  showCfm('Видалити елемент?', 'Елемент списку буде видалено.', function() {
+    if (!LISTS[key]) LISTS[key] = gl(key).slice();
+    LISTS[key].splice(i, 1);
+    saveLists(); renderSettings();
+  });
 }
 
 function moveSItem(key, i, dir) {
@@ -3366,9 +3521,10 @@ function runDiagnostics() {
 }
 
 function resetLists() {
-  if (!confirm('Скинути до стандартних?')) return;
-  LISTS = JSON.parse(JSON.stringify(DEFS));
-  saveLists(); renderSettings();
+  showCfm('Скинути списки?', 'Усі списки повернуться до стандартних значень.', function() {
+    LISTS = JSON.parse(JSON.stringify(DEFS));
+    saveLists(); renderSettings();
+  }, {okText: 'Скинути', danger: false});
 }
 
 function changeAdminPin() {
@@ -3747,6 +3903,54 @@ function csSetValue(wrap, id, label) {
 }
 
 // ── OPEN MODAL ──
+// ── ЧЕРНЕТКА ФОРМИ (автозбереження нового контакту) ──
+var DRAFT_FIELDS = ['fname','fcontact','frole','fli','find','fsrc','fstage','fmgr','fnotes','fhist','fbrands'];
+var DRAFT_KEY = 'crm_form_draft';
+var _draftArmed = false;
+function getFormDraft() {
+  var d = {};
+  for (var i = 0; i < DRAFT_FIELDS.length; i++) {
+    var el = document.getElementById(DRAFT_FIELDS[i]);
+    if (el && el.value) d[DRAFT_FIELDS[i]] = el.value;
+  }
+  return d;
+}
+function saveFormDraft() {
+  if (curModal !== 'client') return;
+  var d = getFormDraft();
+  if (d.fname || d.fcontact || d.fnotes) {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({t: Date.now(), data: d})); } catch(e) {}
+  } else {
+    clearFormDraft();
+  }
+}
+function clearFormDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+}
+function armFormDraftAutosave() {
+  if (_draftArmed) return;
+  var body = document.getElementById('mbody');
+  if (!body) return;
+  body.addEventListener('input', saveFormDraft);
+  _draftArmed = true;
+}
+function maybeRestoreFormDraft() {
+  var raw = null;
+  try { raw = localStorage.getItem(DRAFT_KEY); } catch(e) {}
+  if (!raw) return;
+  var saved;
+  try { saved = JSON.parse(raw); } catch(e) { clearFormDraft(); return; }
+  if (!saved || !saved.data) { clearFormDraft(); return; }
+  if (saved.t && Date.now() - saved.t > 7 * 24 * 3600 * 1000) { clearFormDraft(); return; }
+  var nm = saved.data.fname || saved.data.fcontact || 'контакт';
+  showCfm('Відновити чернетку?', 'Знайдено незбережену форму («' + nm + '»). Відновити введені дані?', function() {
+    for (var k in saved.data) {
+      var el = document.getElementById(k);
+      if (el) el.value = saved.data[k];
+    }
+  }, {okText: 'Відновити', danger: false});
+}
+
 function openModal(type) {
   curModal = type;
   var titles = {client:'Новий контакт', task:'Нове завдання', proposal:'Новий проект', deal:'Додати лід у воронку'};
@@ -3816,6 +4020,10 @@ function openModal(type) {
   }
   document.getElementById('mbody').innerHTML = h;
   document.getElementById('movl').classList.add('on');
+  if (type === 'client') {
+    maybeRestoreFormDraft();
+    setTimeout(armFormDraftAutosave, 120);
+  }
   setTimeout(function() { var f = document.querySelector('#mbody .fi'); if (f) f.focus(); }, 50);
   // Wire up add-file button for proposal form
   setTimeout(function() {
@@ -3829,6 +4037,8 @@ function openModal(type) {
 
 function closeModal() {
   document.getElementById('movl').classList.remove('on');
+  // Чернетку НЕ видаляємо при закритті — очищується тільки після успішного збереження
+  _draftArmed = false;
   curModal = ''; curEditId = null;
   var mBtn = document.getElementById('modal-add-task-btn');
   if (mBtn) mBtn.style.display = 'none';
@@ -3917,49 +4127,49 @@ function saveModal() {
           return false;
         });
       }
-      if (duplicates.length > 0) {
-        var dupNames = duplicates.map(function(x){ return '"' + (x.contact || x.name) + (x.name ? ' (' + x.name + ')' : '') + '"'; }).join(', ');
-        var proceed = confirm('⚠️ Можливий дубль!\n\nВже є контакт: ' + dupNames + '\n\nВсе одно створити новий?');
-        if (!proceed) return;
-      }
-      var id = uid();
-      var phonesJson = safePhones(phones);
-      var emailsJson = safeEmails(emails);
-      var newC = {id:id,name:name,contact:contact,role:role,phones:phonesJson,phone:phonesJson,emails:emailsJson,email:emailsJson,linkedin:linkedin,manager:manager,brands:brands,tags:tags,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'};
-      clients.push(newC);
-      apiPost({sheet:'clients',action:'add',row:buildClientRow(newC)});
-      addAct('Новий контакт: ' + esc(name), '#185FA5');
-      closeModal();
-      // Оновлюємо всі списки
-      filterClients();
-      renderCompanies();
-      updateStats();
-      // Якщо були у розділі компаній — залишаємось там і прокручуємо до потрібної компанії
-      var compSec = document.getElementById('sec-companies');
-      if (compSec && compSec.classList.contains('on')) {
-        // Знаходимо картку компанії і підсвічуємо її
-        setTimeout(function() {
-          var grid = document.getElementById('compgrid');
-          if (!grid) return;
-          var cards = grid.querySelectorAll('.cc');
-          for (var ci = 0; ci < cards.length; ci++) {
-            var titleEl = cards[ci].querySelector('.cch div div');
-            if (titleEl && titleEl.textContent === name) {
-              cards[ci].scrollIntoView({behavior:'smooth', block:'center'});
-              cards[ci].style.outline = '2px solid var(--blue)';
-              cards[ci].style.outlineOffset = '2px';
-              setTimeout(function(card){ card.style.outline = ''; card.style.outlineOffset = ''; }, 2000, cards[ci]);
-              break;
+      function _finishNewContact() {
+        var id = uid();
+        var phonesJson = safePhones(phones);
+        var emailsJson = safeEmails(emails);
+        var newC = {id:id,name:name,contact:contact,role:role,phones:phonesJson,phone:phonesJson,emails:emailsJson,email:emailsJson,linkedin:linkedin,manager:manager,brands:brands,tags:tags,industry:industry,source:source,stage:stage,last:today,notes:notes,history:'[]'};
+        clients.push(newC);
+        apiPost({sheet:'clients',action:'add',row:buildClientRow(newC)});
+        addAct('Новий контакт: ' + esc(name), '#185FA5');
+        clearFormDraft();
+        closeModal();
+        filterClients();
+        renderCompanies();
+        updateStats();
+        var compSec = document.getElementById('sec-companies');
+        if (compSec && compSec.classList.contains('on')) {
+          setTimeout(function() {
+            var grid = document.getElementById('compgrid');
+            if (!grid) return;
+            var cards = grid.querySelectorAll('.cc');
+            for (var ci = 0; ci < cards.length; ci++) {
+              var titleEl = cards[ci].querySelector('.cch div div');
+              if (titleEl && titleEl.textContent === name) {
+                cards[ci].scrollIntoView({behavior:'smooth', block:'center'});
+                cards[ci].style.outline = '2px solid var(--blue)';
+                cards[ci].style.outlineOffset = '2px';
+                setTimeout(function(card){ card.style.outline = ''; card.style.outlineOffset = ''; }, 2000, cards[ci]);
+                break;
+              }
             }
-          }
-        }, 50);
+          }, 50);
+        } else {
+          goToSec('companies');
+          setTimeout(function() {
+            var srch = document.getElementById('compsrch');
+            if (srch) { srch.value = name; renderCompanies(); }
+          }, 80);
+        }
+      }
+      if (duplicates.length > 0) {
+        var dupNames = duplicates.map(function(x){ return '«' + (x.contact || x.name) + (x.name ? ' (' + x.name + ')' : '') + '»'; }).join(', ');
+        showCfm('Можливий дубль', 'Вже є контакт: ' + dupNames + '. Все одно створити новий?', _finishNewContact, {okText: 'Створити', danger: false});
       } else {
-        // Були деінде — переходимо на компанії щоб показати результат
-        goToSec('companies');
-        setTimeout(function() {
-          var srch = document.getElementById('compsrch');
-          if (srch) { srch.value = name; renderCompanies(); }
-        }, 80);
+        _finishNewContact();
       }
     }
   } else if (curModal === 'task_edit') {
@@ -4079,14 +4289,59 @@ document.addEventListener('click', function(e) {
   if (e.target === document.getElementById('movl') && !_mdInModal) closeModal();
 });
 
-function showCfm(title, txt, cb) {
+// ── TOAST + UNDO ──
+var _toastTimer = null, _undoFn = null;
+function showToast(text, undoFn, ms) {
+  var t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  _undoFn = undoFn || null;
+  document.getElementById('toast-undo').style.display = undoFn ? '' : 'none';
+  t.classList.add('on');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(hideToast, ms || 6000);
+}
+function hideToast() {
+  document.getElementById('toast').classList.remove('on');
+  _undoFn = null;
+}
+document.getElementById('toast-undo').addEventListener('click', function() {
+  if (_undoFn) { var f = _undoFn; _undoFn = null; hideToast(); f(); }
+});
+
+// showCfm(title, txt, cb, opts) — opts.okText, opts.danger (false = синя кнопка)
+function showCfm(title, txt, cb, opts) {
+  opts = opts || {};
   document.getElementById('cttl').textContent = title;
   document.getElementById('ctxt').textContent = txt;
   cfmCb = cb;
+  var ok = document.getElementById('cok');
+  ok.textContent = opts.okText || 'Видалити';
+  ok.className = 'btn ' + (opts.danger === false ? 'p' : 'd');
   document.getElementById('covl').classList.add('on');
-  document.getElementById('cok').onclick = function() { closeCfm(); if (cfmCb) cfmCb(); };
+  ok.onclick = function() { closeCfm(); if (cfmCb) cfmCb(); };
 }
 function closeCfm() { document.getElementById('covl').classList.remove('on'); }
+
+// ── ГАРЯЧІ КЛАВІШІ: Ctrl/Cmd+K — пошук; Esc — закрити вікно ──
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    var g = document.getElementById('gsrch');
+    if (g && g.offsetParent !== null) { g.focus(); g.select(); }
+    else { var tb = document.querySelector('.topbar-search input'); if (tb) tb.focus(); else if (g) g.focus(); }
+    return;
+  }
+  if (e.key === 'Escape') {
+    var covl = document.getElementById('covl');
+    var movl = document.getElementById('movl');
+    var drawer = document.getElementById('drawer');
+    var gres = document.getElementById('gsrch-results');
+    if (covl && covl.classList.contains('on')) { closeCfm(); return; }
+    if (movl && movl.classList.contains('on')) { closeModal(); return; }
+    if (drawer && drawer.classList.contains('on')) { closeDrawer(); return; }
+    if (gres && gres.style.display !== 'none') { clearSearch(); return; }
+  }
+});
 document.getElementById('covl').addEventListener('click', function(e) {
   if (e.target === this) closeCfm();
 });
